@@ -33,9 +33,13 @@ class SourceResponse(SourceBase):
     """Schema for source responses."""
 
     id: UUID
-    feed_id: UUID
+    feed_id: UUID | None = None  # Optional - source may not be associated with a feed yet
     created_at: datetime
     is_active: bool = True
+    last_scraped_at: datetime | None = None
+    last_article_title: str | None = None
+    last_article_summary: str | None = None
+    scrape_error: str | None = None
 
     class Config:
         from_attributes = True
