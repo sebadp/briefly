@@ -1,33 +1,15 @@
 # Guía de Testing - Briefly MVP
 
-Esta guía te ayudará a probar todo el proyecto creado en esta sesión.
-
-## Estructura de Ramas (Trunk-Based Development)
-
-Usamos **Trunk-Based Development**, el approach más usado por equipos profesionales (Google, Netflix, Amazon):
-
-```
-main ─────────────────────────────────────────────▶
-  └── feat/initial-mvp (rama actual)
-```
-
-**Principios:**
-- `main` siempre está deployable
-- Ramas cortas (< 2 días)
-- Commits pequeños y frecuentes
-- Feature flags para código no terminado
+Esta guía cubre todo el proyecto: backend, frontend, bases de datos, y los agentes de IA.
 
 ---
 
-## 1. Verificar Infraestructura
+## 1. Prerrequisitos
 
 ```bash
-# Ver que Docker está corriendo
+# Verificar que Docker esté corriendo
 docker ps
-# Esperado:
-# briefly-postgres        (puerto 5432)
-# briefly-dynamodb        (puerto 8000)
-# briefly-dynamodb-admin  (puerto 8001)
+# Esperado: briefly-postgres, briefly-dynamodb, briefly-dynamodb-admin
 
 # Si no están corriendo:
 cd backend && docker-compose up -d
@@ -35,115 +17,184 @@ cd backend && docker-compose up -d
 
 ---
 
-## 2. Probar Backend
+## 2. Configuración de Ambiente
 
-### Terminal 1 - Iniciar servidor
+### Backend (.env)
+```bash
+# Copiar ejemplo y configurar
+cp backend/.env.example backend/.env
+
+# Editar backend/.env con tus API keys:
+LLM_PROVIDER=gemini          # o "anthropic"
+GEMINI_API_KEY=tu-key-aqui   # Para Gemini
+ANTHROPIC_API_KEY=           # Para Claude (opcional)
+```
+
+### Verificar configuración
 ```bash
 cd backend
 source .venv/bin/activate
-uvicorn app.main:app --reload
-```
-
-### Terminal 2 - Probar endpoints
-```bash
-# Health check
-curl http://localhost:8000/health
-# → {"status":"healthy","app":"Briefly"}
-
-# Crear feed con lenguaje natural
-curl -X POST http://localhost:8000/api/v1/feeds/from-natural-language \
-  -H "Content-Type: application/json" \
-  -d '{"query": "Noticias de tecnología en español"}'
-
-# Listar feeds
-curl http://localhost:8000/api/v1/feeds
-
-# Ver documentación interactiva
-open http://localhost:8000/docs
+python -c "from app.config import get_settings; s = get_settings(); print(f'Provider: {s.llm_provider}')"
 ```
 
 ---
 
-## 3. Probar Frontend
+## 3. Iniciar Servicios
 
-### Terminal 3 - Iniciar Next.js
+### Terminal 1 - Backend (puerto 8080)
+```bash
+cd backend
+source .venv/bin/activate
+uvicorn app.main:app --reload --port 8080
+```
+
+### Terminal 2 - Frontend (puerto 3000)
 ```bash
 cd frontend
 npm run dev
 ```
 
-### En el navegador
-1. Abrir http://localhost:3000
-2. Verificar:
-   - ✓ Sidebar con navegación
-   - ✓ Input de lenguaje natural
-   - ✓ Grid de noticias (mock data)
-   - ✓ Theme dark con glassmorphism
+---
 
-3. Probar crear feed:
-   - Escribir "Noticias de IA y startups"
-   - Click "Crear Feed"
-   - Ver mensaje de éxito
+## 4. Probar Backend API
+
+### Health Check
+```bash
+curl http://localhost:8080/health
+# → {"status":"healthy","app":"Briefly"}
+```
+
+### Crear Feed con Lenguaje Natural
+```bash
+curl -X POST http://localhost:8080/api/v1/feeds/from-natural-language \
+  -H "Content-Type: application/json" \
+  -d '{"query": "Noticias de tecnología e inteligencia artificial"}'
+```
+
+### Listar Feeds
+```bash
+curl http://localhost:8080/api/v1/feeds
+```
+
+### Ver Documentación Interactiva
+```bash
+open http://localhost:8080/docs
+```
 
 ---
 
-## 4. Verificar Base de Datos
+## 5. Probar Agentes de IA
+
+### Probar Gemini Scraper
+```bash
+cd backend
+source .venv/bin/activate
+python -c "
+import asyncio
+from app.agents import get_scraper_agent
+
+async def test():
+    scraper = get_scraper_agent()
+    print(f'Using: {type(scraper).__name__}')
+    article = await scraper.scrape_article('https://techcrunch.com')
+    print(f'Title: {article.title}')
+    print(f'Summary: {article.summary[:200]}...')
+    await scraper.close()
+
+asyncio.run(test())
+"
+```
+
+### Cambiar entre Claude y Gemini
+```bash
+# En backend/.env:
+LLM_PROVIDER=gemini   # Usa GeminiScraperAgent
+LLM_PROVIDER=anthropic  # Usa ScraperAgent (Claude)
+```
+
+---
+
+## 6. Probar Frontend
+
+### En el navegador: http://localhost:3000
+
+**Verificar:**
+- ✓ Indicador de conexión (verde = conectado)
+- ✓ Input de lenguaje natural
+- ✓ Tabs de feeds creados
+- ✓ Grid de artículos
+
+**Flujo completo:**
+1. Escribir: "Noticias de startups y venture capital"
+2. Click "Crear Feed"
+3. Ver mensaje de éxito
+4. Navegar a `/feeds` para ver gestión
+
+---
+
+## 7. Verificar Bases de Datos
 
 ### PostgreSQL
 ```bash
-# Conectar a PostgreSQL
 docker exec -it briefly-postgres psql -U briefly -d briefly
 
 # Ver tablas
 \dt
-# → users, feeds, sources, alembic_version
 
-# Ver estructura
-\d+ feeds
+# Ver feeds creados
+SELECT id, name, natural_language_query FROM feeds;
 
 # Salir
 \q
 ```
 
 ### DynamoDB Admin
-1. Abrir http://localhost:8001
-2. Ver tabla `briefly-articles` (se crea al primer scrape)
-
----
-
-## 5. Flujo Completo
-
-1. **Crear feed**: POST `/api/v1/feeds/from-natural-language`
-2. **Agregar source**: POST `/api/v1/sources`
-3. **Scrape**: POST `/api/v1/articles/scrape`
-4. **Ver artículos**: GET `/api/v1/articles?feed_id=...`
-
----
-
-## 6. Git Workflow (Trunk-Based)
-
 ```bash
-# Ver rama actual
-git branch
-# → * feat/initial-mvp
-
-# Ver commits
-git log --oneline -5
-
-# Cuando termines de probar, mergear a main:
-git checkout main
-git merge feat/initial-mvp
-git push origin main
-
-# Crear nueva rama para siguiente feature:
-git checkout -b feat/next-feature
+open http://localhost:8001
+# Ver tabla: briefly-articles
 ```
 
 ---
 
-## 7. Próximos Pasos
+## 8. Estructura de Archivos Clave
 
-- [ ] Conectar frontend al backend real (quitar mock data)
-- [ ] Probar scraping con Claude (requiere `ANTHROPIC_API_KEY`)
+```
+briefly/
+├── backend/
+│   ├── app/
+│   │   ├── agents/
+│   │   │   ├── feed_agent.py      # Strands - NL interpretation
+│   │   │   ├── scraper_agent.py   # Claude scraper
+│   │   │   └── gemini_scraper.py  # Gemini scraper
+│   │   ├── api/v1/                # REST endpoints
+│   │   ├── db/                    # PostgreSQL + DynamoDB
+│   │   └── config.py              # Settings
+│   ├── .env                       # API keys (NO commitear)
+│   └── .env.example               # Template
+├── frontend/
+│   ├── src/app/page.tsx           # Dashboard
+│   ├── src/lib/api.ts             # API client
+│   └── src/components/            # UI components
+├── infra/                         # AWS CDK
+└── docs/                          # Guías
+```
+
+---
+
+## 9. Troubleshooting
+
+| Problema | Solución |
+|----------|----------|
+| "Backend desconectado" en frontend | Verificar que backend corra en puerto **8080** |
+| "Failed to fetch" | CORS o backend no corriendo |
+| "Gemini API error" | Verificar `GEMINI_API_KEY` en `.env` |
+| Imágenes no cargan | Reiniciar frontend (Next.js image config) |
+
+---
+
+## 10. Próximos Pasos
+
+- [ ] Agregar tests automatizados
+- [ ] CI/CD con GitHub Actions
+- [ ] Deploy a AWS: `cd infra && cdk deploy --all`
 - [ ] Agregar autenticación de usuarios
-- [ ] Deploy a AWS
