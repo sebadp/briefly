@@ -32,18 +32,19 @@ class GeminiScraperAgent:
     """Agent that uses Gemini to extract structured data from web pages."""
 
     EXTRACTION_PROMPT = """Analyze the following HTML content from a news article page.
-Extract the article information and return it in JSON format with these fields:
-- title: The article headline
-- summary: A 2-3 sentence summary of the article
-- author: The author name (or null if not found)
-- published_at: The publication date in ISO format (or null if not found)
-- image_url: The main article image URL (or null if not found)
-- full_content: The main article text content
+Extract the article information and return it as a JSON object with these fields:
+- title: The article headline (string)
+- summary: A 2-3 sentence summary of the article (string, max 300 chars)
+- author: The author name (string or null)
+- published_at: The publication date in ISO format YYYY-MM-DD (string or null)
+- image_url: The main article image URL (string or null)
+- full_content: The main article text, first 500 chars only (string)
 
 HTML Content:
 {html_content}
 
-Return ONLY valid JSON, no markdown formatting."""
+IMPORTANT: Return ONLY a valid JSON object. No markdown, no code blocks, no explanations.
+Ensure all strings are properly escaped (no unescaped newlines or quotes in values)."""
 
     def __init__(self):
         settings = get_settings()
@@ -51,6 +52,7 @@ Return ONLY valid JSON, no markdown formatting."""
         self.model = "gemini-2.0-flash"
         self.http_client = httpx.AsyncClient(
             timeout=30.0,
+            follow_redirects=True,
             headers={
                 "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
             },
@@ -104,11 +106,22 @@ Return ONLY valid JSON, no markdown formatting."""
         # Parse JSON response
         try:
             import json
+            import re
+            
             # Clean markdown code blocks if present
             text = response.text.strip()
             if text.startswith("```"):
                 text = text.split("\n", 1)[1]
                 text = text.rsplit("```", 1)[0]
+            
+            # Additional cleaning for common JSON issues
+            # 1. Remove control characters that break JSON
+            text = re.sub(r'[\x00-\x1f\x7f-\x9f]', ' ', text)
+            
+            # 2. Try to find the JSON object boundaries
+            json_match = re.search(r'\{[\s\S]*\}', text)
+            if json_match:
+                text = json_match.group(0)
             
             data = json.loads(text)
             
@@ -133,13 +146,38 @@ Return ONLY valid JSON, no markdown formatting."""
                 full_content=data.get("full_content"),
             )
         except (json.JSONDecodeError, KeyError) as e:
-            # Fallback to basic extraction
+            # Fallback: try regex extraction from the raw response
+            import re
+            raw = response.text
+            
+            title_match = re.search(r'"title"\s*:\s*"([^"]+)"', raw)
+            summary_match = re.search(r'"summary"\s*:\s*"([^"]+)"', raw)
+            author_match = re.search(r'"author"\s*:\s*"([^"]+)"', raw)
+            
+            title = title_match.group(1) if title_match else None
+            summary = summary_match.group(1) if summary_match else None
+            
+            # If regex extracted data, use it
+            if title or summary:
+                return ScrapedArticle(
+                    title=title or "Untitled",
+                    summary=summary or "No summary available",
+                    url=url,
+                    source_name=source_name or self._extract_domain(url),
+                    author=author_match.group(1) if author_match else None,
+                )
+            
+            # Last resort: basic BeautifulSoup extraction
             soup = BeautifulSoup(html, "lxml")
             title = soup.title.string if soup.title else "Untitled"
             
+            # Try to get first paragraph as summary
+            first_p = soup.find("p")
+            fallback_summary = first_p.get_text(strip=True)[:300] if first_p else "Could not extract content"
+            
             return ScrapedArticle(
                 title=title,
-                summary=f"Error extracting article: {e}",
+                summary=fallback_summary,
                 url=url,
                 source_name=source_name or self._extract_domain(url),
             )
@@ -149,6 +187,7 @@ Return ONLY valid JSON, no markdown formatting."""
     ) -> list[ScrapedArticle]:
         """Scrape multiple articles."""
         articles = []
+        # TODO: Run in parallel
         for url in urls:
             try:
                 article = await self.scrape_article(url, source_name)
@@ -156,6 +195,44 @@ Return ONLY valid JSON, no markdown formatting."""
             except Exception as e:
                 print(f"Error scraping {url}: {e}")
         return articles
+
+    async def scrape_multiple_from_homepage(
+        self, url: str, limit: int = 5
+    ) -> list[ScrapedArticle]:
+        """
+        Scrape multiple full articles from a homepage using Gemini.
+        Note: Gemini agent doesn't have a specific list extractor yet, 
+        so we'll extract links from HTML using BS4 first.
+        """
+        html = await self.fetch_page(url)
+        soup = BeautifulSoup(html, "lxml")
+        
+        # Simple heuristic to find article links
+        # Look for links inside typical article containers
+        article_urls = set()
+        domain = self._extract_domain(url)
+        
+        from urllib.parse import urljoin, urlparse
+        base_domain = urlparse(url).netloc
+        
+        for a in soup.find_all("a", href=True):
+            href = a["href"]
+            full_url = urljoin(url, href)
+            
+            # Simple filtering
+            if urlparse(full_url).netloc == base_domain:
+                # Avoid root, admin, tag, etc.
+                path = urlparse(full_url).path
+                if len(path) > 10 and not any(x in path for x in ["/tag/", "/category/", "/author/"]):
+                    article_urls.add(full_url)
+                    
+        # Limit to requested count (request extra to account for failures)
+        # +2 buffer because some URLs might fail or be duplicates
+        to_scrape = list(article_urls)[:limit + 2]
+        articles = await self.scrape_articles(to_scrape, source_name=domain)
+        
+        # Return only the requested amount
+        return articles[:limit]
 
     def _extract_domain(self, url: str) -> str:
         """Extract domain name from URL."""

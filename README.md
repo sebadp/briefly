@@ -23,7 +23,8 @@ briefly/
 | Componente | Tecnología |
 |------------|-----------|
 | **Backend** | FastAPI, Python 3.11+, SQLModel |
-| **AI/LLM** | Strands Agents, Claude SDK (Anthropic) |
+| **AI/LLM** | Strands Agents, Claude SDK, **Gemini API** |
+| **Search** | **Tavily API**, Google Custom Search, Web Scraping Fallback |
 | **DB Relacional** | PostgreSQL |
 | **DB NoSQL** | DynamoDB |
 | **Frontend** | Next.js 14, TypeScript, Tailwind CSS, shadcn/ui |
@@ -39,7 +40,8 @@ briefly/
 - Node.js 20+
 - Docker & Docker Compose
 - AWS CLI (para deploy)
-- Anthropic API Key
+- API Key: Anthropic (Claude) **o** Google (Gemini)
+- API Key: Tavily (Search) o Google Custom Search (opcional)
 
 ### Development Setup
 
@@ -107,12 +109,20 @@ Technical documentation:
 
 ## 🔑 Key Features
 
+### Core Features
 - **🗣️ Natural Language Input**: Describe your interests, get a curated feed
-- **🤖 AI-Powered Scraping**: Claude extracts structured content from any news site
+- **🤖 AI-Powered Scraping**: Claude/Gemini extracts structured content from any news site
 - **📰 Clean UI**: Modern, responsive news cards with glassmorphism design
 - **⚡ Fast Refresh**: Configurable refresh intervals per feed
 - **🌐 Multi-source**: Combine multiple websites into a single feed
 - **🔒 Personal**: Your feeds, your sources, your data
+
+### New Features
+- **📚 Multi-Article Scraping**: Scrape multiple articles from a URL at once (configurable: 1-15)
+- **🔎 Research Agent**: Autonomous agent that investigates topics, searches the web, and curates sources
+- **📊 Auto-Dashboards**: Create dashboards automatically from Research Agent results
+- **💻 Streaming UI**: Watch the Research Agent work in real-time with a terminal-style interface
+- **🎯 Grouped Sources**: Articles displayed grouped by source with clear visual hierarchy
 
 ---
 
@@ -165,9 +175,12 @@ See [Infrastructure Guide](infra/README.md) for detailed deployment instructions
 
 ## 🗺️ Roadmap
 
-- [ ] MVP Backend (feeds, sources, scraping)
-- [ ] MVP Frontend (dashboard, news cards)
-- [ ] AI Integration (Strands + Claude)
+- [x] MVP Backend (feeds, sources, scraping)
+- [x] MVP Frontend (dashboard, news cards)
+- [x] AI Integration (Strands + Claude/Gemini)
+- [x] Multi-Article Scraping
+- [x] Research Agent with Streaming UI
+- [x] Auto-Dashboard Creation
 - [ ] AWS Deployment
 - [ ] RSS/Atom feed support
 - [ ] Email digest feature

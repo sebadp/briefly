@@ -28,6 +28,11 @@ cp backend/.env.example backend/.env
 LLM_PROVIDER=gemini          # o "anthropic"
 GEMINI_API_KEY=tu-key-aqui   # Para Gemini
 ANTHROPIC_API_KEY=           # Para Claude (opcional)
+
+# Search APIs (para Research Agent)
+TAVILY_API_KEY=tu-key        # Opción preferida
+GOOGLE_SEARCH_API_KEY=       # Fallback
+GOOGLE_SEARCH_ENGINE_ID=     # Fallback
 ```
 
 ### Verificar configuración
@@ -83,7 +88,24 @@ open http://localhost:8080/docs
 
 ---
 
-## 5. Probar Agentes de IA
+## 5. Probar Multi-Article Scraping
+
+### Vía API (cURL)
+```bash
+# Scrapear 5 artículos de TechCrunch
+curl -X POST "http://localhost:8080/api/v1/sources/add-and-scrape-multiple?url=https://techcrunch.com&name=TechCrunch&article_count=5"
+```
+
+### Vía Frontend
+1. Ir a http://localhost:3000/sources
+2. Pegar URL: `https://techcrunch.com`
+3. Seleccionar "5 artículos" en el dropdown
+4. Click "Scrape"
+5. Ver tarjetas de artículos agrupados por fuente
+
+---
+
+## 6. Probar Agentes de IA
 
 ### Probar Gemini Scraper
 ```bash
@@ -96,10 +118,27 @@ from app.agents import get_scraper_agent
 async def test():
     scraper = get_scraper_agent()
     print(f'Using: {type(scraper).__name__}')
-    article = await scraper.scrape_article('https://techcrunch.com')
-    print(f'Title: {article.title}')
-    print(f'Summary: {article.summary[:200]}...')
+    articles = await scraper.scrape_multiple_from_homepage('https://techcrunch.com', limit=3)
+    for a in articles:
+        print(f'- {a.title}')
     await scraper.close()
+
+asyncio.run(test())
+"
+```
+
+### Probar Search Service
+```bash
+python -c "
+import asyncio
+from app.services.search_service import SearchService
+
+async def test():
+    ss = SearchService()
+    results = await ss.search('AI news websites', num_results=5)
+    for r in results:
+        print(f'{r["source"]}: {r["title"]}')
+    await ss.close()
 
 asyncio.run(test())
 "
@@ -114,7 +153,34 @@ LLM_PROVIDER=anthropic  # Usa ScraperAgent (Claude)
 
 ---
 
-## 6. Probar Frontend
+## 7. Probar Research Agent & Dashboards
+
+### Vía Frontend (Recomendado)
+1. Ir a http://localhost:3000/dashboards
+2. Click "Nuevo Research"
+3. Escribir tema: "Inteligencia Artificial en Latinoamérica"
+4. Observar el terminal en tiempo real:
+   - 🧠 Generando queries
+   - 🌐 Buscando en Google/Tavily
+   - 🕵️ Validando fuentes
+   - ✨ Resultados encontrados
+5. Click "Crear Dashboard Automático"
+6. Ver dashboard con fuentes y artículos agrupados
+
+### Vía API (Stream SSE)
+```bash
+# Stream de research en tiempo real
+curl -N "http://localhost:8080/api/v1/research/stream?topic=crypto%20news"
+```
+
+### Listar Dashboards
+```bash
+curl http://localhost:8080/api/v1/dashboards
+```
+
+---
+
+## 8. Probar Frontend
 
 ### En el navegador: http://localhost:3000
 
@@ -123,16 +189,19 @@ LLM_PROVIDER=anthropic  # Usa ScraperAgent (Claude)
 - ✓ Input de lenguaje natural
 - ✓ Tabs de feeds creados
 - ✓ Grid de artículos
+- ✓ **Nuevo**: Página de Sources con selector de cantidad
+- ✓ **Nuevo**: Página de Dashboards con Research Agent
 
 **Flujo completo:**
 1. Escribir: "Noticias de startups y venture capital"
 2. Click "Crear Feed"
 3. Ver mensaje de éxito
 4. Navegar a `/feeds` para ver gestión
+5. **Nuevo**: Navegar a `/dashboards/new` para probar Research Agent
 
 ---
 
-## 7. Verificar Bases de Datos
+## 9. Verificar Bases de Datos
 
 ### PostgreSQL
 ```bash

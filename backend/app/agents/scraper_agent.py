@@ -229,6 +229,47 @@ Responde ÚNICAMENTE con JSON válido:
             print(f"Error scraping article list from {url}: {e}")
             return []
 
+    async def scrape_multiple_from_homepage(
+        self, url: str, limit: int = 5
+    ) -> list[ExtractedArticle]:
+        """
+        Scrape multiple full articles from a homepage/list URL.
+
+        Args:
+            url: URL of the homepage or section
+            limit: Maximum number of articles to scrape
+
+        Returns:
+            List of fully scraped ExtractedArticle objects
+        """
+        # 1. Get list of article headers/links
+        article_links = await self.scrape_article_list(url)
+        
+        if not article_links:
+            return []
+            
+        # 2. Limit to requested count
+        to_scrape = article_links[:limit]
+        
+        # 3. Scrape in parallel
+        results = []
+        import asyncio
+        
+        tasks = []
+        for item in to_scrape:
+            if item.get("url"):
+                tasks.append(self.scrape_article(item["url"]))
+                
+        # Wait for all
+        scraped = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # 4. Filter successful results
+        for res in scraped:
+            if isinstance(res, ExtractedArticle):
+                results.append(res)
+                
+        return results
+
     async def close(self):
         """Close the HTTP client."""
         await self.http.aclose()
