@@ -19,8 +19,10 @@ class Settings(BaseSettings):
     debug: bool = False
     api_v1_prefix: str = "/api/v1"
 
-    # Anthropic
+    # AI/LLM Providers
+    llm_provider: str = "anthropic"  # "anthropic" or "gemini"
     anthropic_api_key: str = ""
+    gemini_api_key: str = ""
 
     # PostgreSQL
     database_url: str = "postgresql+asyncpg://briefly:briefly@localhost:5432/briefly"
