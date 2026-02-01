@@ -240,21 +240,59 @@ Ensure all strings are properly escaped (no unescaped newlines or quotes in valu
         for a in soup.find_all("a", href=True):
             href = a["href"]
             full_url = urljoin(url, href)
-            
-            # Simple filtering
             if urlparse(full_url).netloc == base_domain:
                 # Avoid root, admin, tag, etc.
                 path = urlparse(full_url).path
-                if len(path) > 10 and not any(x in path for x in ["/tag/", "/category/", "/author/"]):
+                
+                
+                # Heuristic: Avoid common non-article paths
+                path_lower = path.lower()
+                
+                # Exclude obvious non-articles
+                if any(x in path_lower for x in ["/tag/", "/category/", "/author/", "/login", "/signup", "/contact", "/policy", "/terms", "/cookies", "/pricing", "/features", "/product", "/careers", "/about", "/legal", "/security"]):
+                    continue
+                    
+                # Strict Mode: URL must look like an article 
+                # (contains date or /news/, /blog/, /post/, or is significantly long with dashes)
+                is_likely_article = False
+                
+                if len(path) > 20 and "-" in path:
+                     is_likely_article = True
+                elif any(x in path_lower for x in ["/news/", "/blog/", "/press/", "/posts/", "/2024/", "/2025/"]):
+                     is_likely_article = True
+                
+                if is_likely_article:
                     article_urls.add(full_url)
                     
         # Limit to requested count (request extra to account for failures)
-        # +2 buffer because some URLs might fail or be duplicates
-        to_scrape = list(article_urls)[:limit + 2]
+        # +3 buffer
+        to_scrape = list(article_urls)[:limit + 3]
         articles = await self.scrape_articles(to_scrape, source_name=domain)
         
+        # Post-validation: Ensure content is not a policy page
+        valid_articles = [a for a in articles if self._is_meaningful_article(a)]
+        
         # Return only the requested amount
-        return articles[:limit]
+        return valid_articles[:limit]
+        
+    def _is_meaningful_article(self, article: ScrapedArticle) -> bool:
+        """Check if article looks like real content, not a policy/cookie page."""
+        if not article.title or not article.summary:
+            return False
+            
+        title_lower = article.title.lower()
+        if any(x in title_lower for x in ["cookie", "privacy policy", "aviso legal", "terminos", "conditions", "subscribe", "login", "politica"]):
+            return False
+            
+        # Stricter length check
+        if len(article.summary) < 50:
+            return False
+            
+        # Check against "Untitled" and "Home"
+        if article.title.strip().lower() in ["untitled", "home", "homepage", "index", "welcome"]:
+             return False
+
+        return True
 
     def _extract_domain(self, url: str) -> str:
         """Extract domain name from URL."""
