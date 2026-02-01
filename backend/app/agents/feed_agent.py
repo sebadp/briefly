@@ -71,7 +71,7 @@ KNOWN_SOURCES = [
 ]
 
 
-@tool  # type: ignore[untyped-decorator]
+@tool
 def search_news_sources(
     topics: list[str],
     language: str = "es",
@@ -123,7 +123,7 @@ def search_news_sources(
     return sorted_results[:max_results]
 
 
-@tool  # type: ignore[untyped-decorator]
+@tool
 def validate_url(url: str) -> dict[str, Any]:
     """
     Validate if a URL is accessible and appears to be a news source.
@@ -157,7 +157,7 @@ def validate_url(url: str) -> dict[str, Any]:
         }
 
 
-@tool  # type: ignore[untyped-decorator]
+@tool
 def extract_intent(query: str) -> dict[str, Any]:
     """
     Extract structured intent from a natural language query.
@@ -304,7 +304,7 @@ Responde SIEMPRE con un JSON válido con este formato:
 
 Analiza la petición, busca fuentes relevantes y genera la configuración del feed."""
 
-        response = await self.agent.run(prompt)
+        response = await self.agent.invoke_async(prompt)
 
         # Parse JSON from response
         import json

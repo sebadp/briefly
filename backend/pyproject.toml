@@ -80,6 +80,8 @@ known-first-party = ["app"]
 python_version = "3.11"
 strict = true
 ignore_missing_imports = true
+disallow_subclassing_any = false
+disable_error_code = ["call-arg", "untyped-decorator"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

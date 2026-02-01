@@ -8,7 +8,7 @@ from sqlalchemy import JSON, Column
 from sqlmodel import Field, Relationship, SQLModel
 
 
-class Feed(SQLModel, table=True):  # type: ignore[call-arg]
+class Feed(SQLModel, table=True):
     """News feed model - stores user's personalized feed configurations."""
 
     __tablename__ = "feeds"
@@ -37,7 +37,7 @@ class Feed(SQLModel, table=True):  # type: ignore[call-arg]
     sources: list["Source"] = Relationship(back_populates="feed")
 
 
-class Source(SQLModel, table=True):  # type: ignore[call-arg]
+class Source(SQLModel, table=True):
     """News source model - websites/RSS feeds to scrape."""
 
     __tablename__ = "sources"
