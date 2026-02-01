@@ -1,7 +1,6 @@
 """Basic sanity tests for the Briefly backend."""
 
 
-
 class TestBasic:
     """Basic tests that don't require app import."""
 
