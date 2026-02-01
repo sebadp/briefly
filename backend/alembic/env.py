@@ -9,10 +9,10 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from sqlmodel import SQLModel
 
 from alembic import context
+from app.config import get_settings
 
 # Import all models so they are registered with SQLModel
-from app.models import User, Feed, Source  # noqa: F401
-from app.config import get_settings
+from app.models import Feed, Source, User  # noqa: F401
 
 # Alembic Config object
 config = context.config

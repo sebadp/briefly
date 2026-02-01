@@ -1,8 +1,8 @@
 """Source schemas for API request/response validation."""
 
 from datetime import datetime
-from uuid import UUID
 from enum import Enum
+from uuid import UUID
 
 from pydantic import BaseModel, Field, HttpUrl
 

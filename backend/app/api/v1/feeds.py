@@ -7,8 +7,8 @@ from fastapi import APIRouter, HTTPException, status
 from app.schemas.feed import (
     FeedCreate,
     FeedCreateFromNL,
-    FeedResponse,
     FeedListResponse,
+    FeedResponse,
 )
 
 router = APIRouter()
@@ -28,8 +28,8 @@ async def list_feeds() -> FeedListResponse:
 @router.post("", response_model=FeedResponse, status_code=status.HTTP_201_CREATED)
 async def create_feed(feed_in: FeedCreate) -> FeedResponse:
     """Create a new feed with explicit configuration."""
+    from datetime import UTC, datetime
     from uuid import uuid4
-    from datetime import datetime, UTC
 
     feed_id = uuid4()
     feed = {
@@ -52,13 +52,13 @@ async def create_feed(feed_in: FeedCreate) -> FeedResponse:
 async def create_feed_from_natural_language(request: FeedCreateFromNL) -> FeedResponse:
     """
     Create a feed from a natural language description.
-    
+
     Example: "Noticias de tecnología e IA en español"
-    
+
     The AI agent will interpret the query and suggest relevant sources.
     """
+    from datetime import UTC, datetime
     from uuid import uuid4
-    from datetime import datetime, UTC
 
     # TODO: Use Strands agent to interpret the query
     # For now, create a basic feed

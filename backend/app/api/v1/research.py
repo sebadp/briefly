@@ -2,9 +2,11 @@
 
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
+
 from app.agents.research_agent import ResearchAgent
 
 router = APIRouter()
+
 
 @router.get("/stream")
 async def stream_research(topic: str):
@@ -13,7 +15,7 @@ async def stream_research(topic: str):
     Returns Server-Sent Events (SSE).
     """
     agent = ResearchAgent()
-    
+
     async def event_generator():
         try:
             async for event_data in agent.research_topic(topic):
@@ -22,7 +24,4 @@ async def stream_research(topic: str):
         finally:
             await agent.close()
 
-    return StreamingResponse(
-        event_generator(), 
-        media_type="text/event-stream"
-    )
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
