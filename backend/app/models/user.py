@@ -6,7 +6,7 @@ from uuid import UUID, uuid4
 from sqlmodel import Field, SQLModel
 
 
-class User(SQLModel, table=True):  # type: ignore
+class User(SQLModel, table=True):  # type: ignore[call-arg]
     """User account model."""
 
     __tablename__ = "users"

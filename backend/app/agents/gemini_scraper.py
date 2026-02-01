@@ -136,7 +136,7 @@ Ensure all strings are properly escaped (no unescaped newlines or quotes in valu
             import re
 
             # Clean markdown code blocks if present
-            text = response.text.strip()
+            text = (response.text or "").strip()
             if text.startswith("```"):
                 text = text.split("\n", 1)[1]
                 text = text.rsplit("```", 1)[0]
@@ -176,7 +176,7 @@ Ensure all strings are properly escaped (no unescaped newlines or quotes in valu
             # Fallback: try regex extraction from the raw response
             import re
 
-            raw = response.text
+            raw = response.text or ""
 
             title_match = re.search(r'"title"\s*:\s*"([^"]+)"', raw)
             summary_match = re.search(r'"summary"\s*:\s*"([^"]+)"', raw)

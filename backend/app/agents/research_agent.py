@@ -14,7 +14,7 @@ try:
     from google import genai
     from google.genai import types
 except ImportError:
-    genai = None  # Handle missing dependency gracefully
+    genai: Any = None  # type: ignore[no-redef]
 
 
 class ResearchState(TypedDict):

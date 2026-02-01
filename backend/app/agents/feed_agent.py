@@ -304,7 +304,7 @@ Responde SIEMPRE con un JSON válido con este formato:
 
 Analiza la petición, busca fuentes relevantes y genera la configuración del feed."""
 
-        response = await self.agent.run_async(prompt)
+        response = await self.agent.run(prompt)
 
         # Parse JSON from response
         import json
