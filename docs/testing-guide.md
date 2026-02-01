@@ -69,16 +69,16 @@ curl http://localhost:8080/health
 # → {"status":"healthy","app":"Briefly"}
 ```
 
-### Crear Feed con Lenguaje Natural
+### Crear Briefing con Lenguaje Natural
 ```bash
-curl -X POST http://localhost:8080/api/v1/feeds/from-natural-language \
+curl -X POST http://localhost:8080/api/v1/briefings \
   -H "Content-Type: application/json" \
-  -d '{"query": "Noticias de tecnología e inteligencia artificial"}'
+  -d '{"topic": "Noticias de tecnología e inteligencia artificial", "name": "AI News"}'
 ```
 
-### Listar Feeds
+### Listar Briefings
 ```bash
-curl http://localhost:8080/api/v1/feeds
+curl http://localhost:8080/api/v1/briefings
 ```
 
 ### Ver Documentación Interactiva
@@ -97,7 +97,7 @@ curl -X POST "http://localhost:8080/api/v1/sources/add-and-scrape-multiple?url=h
 ```
 
 ### Vía Frontend
-1. Ir a http://localhost:3000/sources
+1. Ir a http://localhost:3000/explore
 2. Pegar URL: `https://techcrunch.com`
 3. Seleccionar "5 artículos" en el dropdown
 4. Click "Scrape"
@@ -153,19 +153,18 @@ LLM_PROVIDER=anthropic  # Usa ScraperAgent (Claude)
 
 ---
 
-## 7. Probar Research Agent & Dashboards
+## 7. Probar Research Agent & Briefings
 
 ### Vía Frontend (Recomendado)
-1. Ir a http://localhost:3000/dashboards
-2. Click "Nuevo Research"
-3. Escribir tema: "Inteligencia Artificial en Latinoamérica"
-4. Observar el terminal en tiempo real:
+1. Ir a http://localhost:3000
+2. Escribir tema o click en quick topic (Tech, Startups, etc.)
+3. Observar el terminal en tiempo real:
    - 🧠 Generando queries
    - 🌐 Buscando en Google/Tavily
    - 🕵️ Validando fuentes
    - ✨ Resultados encontrados
-5. Click "Crear Dashboard Automático"
-6. Ver dashboard con fuentes y artículos agrupados
+4. Click "Crear Briefing" al finalizar
+5. Ver briefing con fuentes agrupadas
 
 ### Vía API (Stream SSE)
 ```bash

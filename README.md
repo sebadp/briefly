@@ -1,8 +1,8 @@
-# Briefly 🗞️⚡
+# Briefly 📰⚡
 
-> AI-powered personalized news feeds using natural language
+> AI-powered personalized news briefings using natural language
 
-**Briefly** te permite crear feeds de noticias personalizados describiendo en lenguaje natural qué temas te interesan. El sistema usa IA para encontrar fuentes relevantes, scrapear artículos y presentarlos en un formato limpio y moderno.
+**Briefly** te permite crear briefings de noticias personalizados describiendo en lenguaje natural qué temas te interesan. El Research Agent de IA investiga, encuentra fuentes relevantes, scrapea artículos y los presenta en un formato limpio y moderno.
 
 ![Dashboard Preview](docs/assets/dashboard_preview.png)
 
@@ -75,19 +75,19 @@ Open [http://localhost:3000](http://localhost:3000) 🎉
 
 ### `/backend`
 FastAPI application with:
-- REST API for feeds, sources, and articles
-- Strands agent for natural language interpretation
-- Claude-powered web scraper
+- REST API for briefings, sources, and articles
+- Research Agent for automatic source discovery
+- Claude/Gemini-powered web scraper
 - PostgreSQL + DynamoDB data layer
 
 [→ Backend README](backend/README.md)
 
 ### `/frontend`
 Next.js 14 application with:
-- Modern dashboard UI
-- Natural language feed creation
-- Responsive news card grid
-- Real-time updates
+- **Inicio**: NL input with quick topic suggestions
+- **Mis Briefings**: Research Agent + auto-curated sources  
+- **Explorar**: Manual source discovery
+- Responsive glassmorphism design
 
 [→ Frontend README](frontend/README.md)
 
@@ -109,22 +109,22 @@ Technical documentation:
 
 ## 🔑 Key Features
 
-### Core Features
-- **🗣️ Natural Language Input**: Describe your interests, get a curated feed
-- **🤖 AI-Powered Scraping**: Claude/Gemini extracts structured content from any news site
-- **📰 Clean UI**: Modern, responsive news cards with glassmorphism design
-- **⚡ Fast Refresh**: Configurable refresh intervals per feed
-- **🌐 Multi-source**: Combine multiple websites into a single feed
-- **🔒 Personal**: Your feeds, your sources, your data
+### Core Flow
+1. **Describe** what you want to follow in natural language
+2. **Research Agent** automatically searches and validates sources
+3. **Briefing** is created with curated articles
+4. **Auto-refresh** keeps content updated
 
-### New Features
-- **📚 Multi-Article Scraping**: Scrape multiple articles from a URL at once (configurable: 1-15)
-- **🔎 Research Agent**: Autonomous agent that investigates topics, searches the web, and curates sources
-- **📊 Auto-Dashboards**: Create dashboards automatically from Research Agent results
-- **💻 Streaming UI**: Watch the Research Agent work in real-time with a terminal-style interface
-- **🎯 Grouped Sources**: Articles displayed grouped by source with clear visual hierarchy
+### Features
+- **🧠 Research Agent**: AI autonomously investigates topics and finds sources
+- **🤖 Multi-LLM Scraping**: Claude or Gemini extracts structured content
+- **🔎 Smart Search**: Tavily/Google API with web scraping fallback
+- **📚 Briefings**: Grouped articles by source with descriptions
+- **🎯 Quick Topics**: One-click topic suggestions on home page
+- **📱 Modern UI**: Glassmorphism design with smooth animations
 
 ---
+
 
 ## 🛠️ Development
 
@@ -177,10 +177,11 @@ See [Infrastructure Guide](infra/README.md) for detailed deployment instructions
 
 - [x] MVP Backend (feeds, sources, scraping)
 - [x] MVP Frontend (dashboard, news cards)
-- [x] AI Integration (Strands + Claude/Gemini)
+- [x] AI Integration (Claude/Gemini)
 - [x] Multi-Article Scraping
 - [x] Research Agent with Streaming UI
-- [x] Auto-Dashboard Creation
+- [x] Auto-Briefing Creation
+- [x] UX Consolidation (Briefings flow)
 - [ ] AWS Deployment
 - [ ] RSS/Atom feed support
 - [ ] Email digest feature
