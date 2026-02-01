@@ -1,6 +1,5 @@
 """Basic sanity tests for the Briefly backend."""
 
-import pytest
 
 
 class TestBasic:
