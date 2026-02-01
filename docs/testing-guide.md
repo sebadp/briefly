@@ -260,9 +260,33 @@ briefly/
 
 ---
 
-## 10. Próximos Pasos
+## 10. CI/CD y Code Review
 
-- [ ] Agregar tests automatizados
-- [ ] CI/CD con GitHub Actions
+El proyecto incluye un pipeline automatizado en GitHub Actions.
+
+### Pipeline de Calidad (`ci.yml`)
+Se ejecuta en cada `push` y `pull_request`.
+- **Tests**: `pytest`
+- **Linting**: `ruff check` y `ruff format`
+- **Typing**: `mypy`
+
+### AI Code Reviewer (`ai-review.yml`)
+Se ejecuta automáticamente al abrir un **Pull Request**.
+1. El script `scripts/ai_reviewer.py` analiza el diff.
+2. Gemini 2.0 busca bugs y mejoras.
+3. El agente comenta directamente en el PR.
+
+**Para probar el AI Reviewer localmente:**
+```bash
+export GEMINI_API_KEY=tu-api-key
+export GITHUB_TOKEN=tu-github-token # Opcional si solo quieres ver el output en consola
+# Nota: El script normal espera entorno de GitHub Actions, pero puedes ver la lógica en backend/scripts/ai_reviewer.py
+```
+
+---
+
+## 11. Próximos Pasos
+
+- [x] CI/CD con GitHub Actions
 - [ ] Deploy a AWS: `cd infra && cdk deploy --all`
 - [ ] Agregar autenticación de usuarios
