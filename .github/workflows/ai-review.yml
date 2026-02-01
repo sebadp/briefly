@@ -1,0 +1,38 @@
+name: AI Code Reviewer
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    if: github.repository_owner == 'sebadp' # Prevent running on forks if public, though this is likely private
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # fetch all history for diffs if needed, though we use API
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+    
+    - name: Install Reviewer Dependencies
+      run: |
+        pip install google-genai httpx
+
+    - name: Run AI Reviewer
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+      run: |
+        python backend/scripts/ai_reviewer.py
