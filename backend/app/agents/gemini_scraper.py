@@ -64,6 +64,28 @@ Ensure all strings are properly escaped (no unescaped newlines or quotes in valu
         response.raise_for_status()
         return response.text
 
+    async def detect_rss_feed(self, url: str) -> str | None:
+        """Attempt to find an RSS feed URL from the homepage."""
+        try:
+            html = await self.fetch_page(url)
+            soup = BeautifulSoup(html, "lxml")
+            
+            # 1. Check standard <link> tags
+            feed_link = soup.find("link", type="application/rss+xml")
+            if feed_link:
+                return feed_link.get("href")
+                
+            feed_link = soup.find("link", type="application/atom+xml")
+            if feed_link:
+                return feed_link.get("href")
+                
+            # 2. Check for common patterns if no tag found (heuristic)
+            # This is risky without verify, so we stick to tags only for reliability logic
+            
+            return None
+        except Exception:
+            return None
+
     def _clean_html(self, html: str, max_length: int = 50000) -> str:
         """Clean and truncate HTML for processing."""
         soup = BeautifulSoup(html, "lxml")
