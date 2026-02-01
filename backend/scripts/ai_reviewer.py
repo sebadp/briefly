@@ -15,7 +15,7 @@ if not GITHUB_TOKEN or not GEMINI_API_KEY:
     exit(0)
 
 
-async def get_pr_diff():
+async def get_pr_diff() -> str | None:
     """Fetch the PR diff from GitHub API to avoid git history issues in shallow clones."""
     if not PR_NUMBER:
         print("No PR Number found. Running locally?")
@@ -38,7 +38,7 @@ async def get_pr_diff():
             return None
 
 
-async def analyze_code(diff_text):
+async def analyze_code(diff_text: str) -> str | None:
     """Send diff to Gemini for analysis."""
     client = genai.Client(api_key=GEMINI_API_KEY)
 
@@ -69,13 +69,13 @@ async def analyze_code(diff_text):
             model="gemini-2.0-flash",
             contents=prompt,
         )
-        return response.text
+        return str(response.text)
     except Exception as e:
         print(f"Gemini Error: {e}")
         return None
 
 
-async def post_comment(review_body):
+async def post_comment(review_body: str) -> None:
     """Post the review as a comment on the PR."""
     if not review_body:
         return
@@ -99,7 +99,7 @@ async def post_comment(review_body):
             print(f"Failed to post comment: {resp.status_code} {resp.text}")
 
 
-async def main():
+async def main() -> None:
     print(f"Starting AI Review for {GITHUB_REPOSITORY} PR #{PR_NUMBER}")
 
     diff = await get_pr_diff()

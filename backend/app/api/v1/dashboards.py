@@ -1,15 +1,14 @@
 """Dashboard API endpoints."""
 
 from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.postgres import get_session as get_db
-from typing import Any
-
 from app.api.v1.sources import _sources_db  # Shared in-memory DB for MVP linkage
+from app.db.postgres import get_session as get_db
 from app.schemas.dashboard import DashboardCreate, DashboardResponse
 
 router = APIRouter()

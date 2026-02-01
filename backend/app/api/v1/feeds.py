@@ -1,9 +1,12 @@
 """Feeds API endpoints."""
 
+from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db.postgres import get_session as get_db
 from app.schemas.feed import (
     FeedCreate,
     FeedCreateFromNL,
@@ -15,7 +18,7 @@ router = APIRouter()
 
 
 # In-memory storage for MVP (will be replaced with PostgreSQL)
-_feeds_db: dict[UUID, dict] = {}
+_feeds_db: dict[UUID, dict[str, Any]] = {}
 
 
 @router.get("", response_model=FeedListResponse)
@@ -76,7 +79,7 @@ async def create_feed_from_natural_language(request: FeedCreateFromNL) -> FeedRe
         },
     }
     _feeds_db[feed_id] = feed
-    return FeedResponse(**feed)
+    return FeedResponse.model_validate(feed)
 
 
 @router.get("/{feed_id}", response_model=FeedResponse)
@@ -87,7 +90,7 @@ async def get_feed(feed_id: UUID) -> FeedResponse:
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Feed {feed_id} not found",
         )
-    return FeedResponse(**_feeds_db[feed_id])
+    return FeedResponse.model_validate(_feeds_db[feed_id])
 
 
 @router.delete("/{feed_id}", status_code=status.HTTP_204_NO_CONTENT)

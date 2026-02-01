@@ -1,13 +1,12 @@
 """Sources API endpoints."""
 
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.db.postgres import get_session as get_db
-
-from typing import Any
-
 from app.schemas.source import SourceCreate, SourceListResponse, SourceResponse
 
 router = APIRouter()

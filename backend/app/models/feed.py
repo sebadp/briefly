@@ -1,13 +1,14 @@
 """Feed model for PostgreSQL."""
 
 from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID, uuid4
 
 from sqlalchemy import JSON, Column
 from sqlmodel import Field, Relationship, SQLModel
 
 
-class Feed(SQLModel, table=True):
+class Feed(SQLModel, table=True):  # type: ignore
     """News feed model - stores user's personalized feed configurations."""
 
     __tablename__ = "feeds"
@@ -36,7 +37,7 @@ class Feed(SQLModel, table=True):
     sources: list["Source"] = Relationship(back_populates="feed")
 
 
-class Source(SQLModel, table=True):
+class Source(SQLModel, table=True):  # type: ignore
     """News source model - websites/RSS feeds to scrape."""
 
     __tablename__ = "sources"

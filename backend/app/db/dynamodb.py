@@ -24,7 +24,7 @@ class DynamoDBClient:
         )
         self.config = Config(retries={"max_attempts": 3, "mode": "adaptive"})
 
-    async def get_client(self):
+    async def get_client(self) -> Any:
         """Get DynamoDB client context manager."""
         kwargs = {"config": self.config}
         if self.settings.dynamodb_endpoint_url:

@@ -5,12 +5,12 @@ Alternative to Claude scraper, using Google's Gemini model.
 
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Any
 
 import httpx
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 from google import genai
 from google.genai import types
-from typing import Any
 
 from app.config import get_settings
 
@@ -206,7 +206,7 @@ Ensure all strings are properly escaped (no unescaped newlines or quotes in valu
             )
 
             return ScrapedArticle(
-                title=title,
+                title=title or "Untitled",
                 summary=fallback_summary,
                 url=url,
                 source_name=source_name or self._extract_domain(url),
@@ -243,14 +243,18 @@ Ensure all strings are properly escaped (no unescaped newlines or quotes in valu
         base_domain = urlparse(url).netloc
 
         for a in soup.find_all("a", href=True):
-            href = a["href"]
+            if not isinstance(a, Tag):
+                continue
+            href = a.get("href")
+            if not isinstance(href, str):
+                continue
             full_url = urljoin(url, href)
             if urlparse(full_url).netloc == base_domain:
                 # Avoid root, admin, tag, etc.
                 path = urlparse(full_url).path
 
                 # Heuristic: Avoid common non-article paths
-                path_lower = path.lower()
+                path_lower = str(path).lower()
 
                 # Exclude obvious non-articles
                 if any(
@@ -280,7 +284,7 @@ Ensure all strings are properly escaped (no unescaped newlines or quotes in valu
                 # (contains date or /news/, /blog/, /post/, or is significantly long with dashes)
                 is_likely_article = False
 
-                if len(path) > 20 and "-" in path:
+                if path and len(path) > 20 and "-" in path:
                     is_likely_article = True
                 elif any(
                     x in path_lower

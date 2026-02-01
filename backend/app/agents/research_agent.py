@@ -4,7 +4,7 @@ import asyncio
 import json
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
-from typing import Any, TypedDict
+from typing import Any, TypedDict, cast
 
 from app.agents import get_scraper_agent
 from app.config import get_settings
@@ -121,13 +121,13 @@ class ResearchAgent:
 
                 added_count = 0
                 for future in asyncio.as_completed(tasks):
-                    res = await future
-                    if res:
-                        yield self._event("log", res["log_msg"])
-                        if res.get("valid"):
-                            source_data = res.get("source_data")
+                    validation_res = await future
+                    if validation_res:
+                        yield self._event("log", validation_res["log_msg"])
+                        if validation_res.get("valid"):
+                            source_data = validation_res.get("source_data")
                             if isinstance(source_data, dict):
-                                state["found_sources"].append(source_data)  # type: ignore
+                                state["found_sources"].append(cast(dict[str, Any], source_data))
                             added_count += 1
 
                 yield self._event(

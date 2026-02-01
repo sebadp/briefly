@@ -1,7 +1,7 @@
 """Feed Creation Agent - Interprets natural language queries to create feeds."""
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 from strands import Agent
 from strands.tools import tool
@@ -71,7 +71,7 @@ KNOWN_SOURCES = [
 ]
 
 
-@tool
+@tool  # type: ignore[untyped-decorator]
 def search_news_sources(
     topics: list[str],
     language: str = "es",
@@ -117,11 +117,11 @@ def search_news_sources(
 
     # Sort by relevance and limit
     # Use a typed key function for sorting
-    sorted_results = sorted(results, key=lambda x: x.get("relevance_score", 0), reverse=True)
+    sorted_results = sorted(results, key=lambda x: int(cast(int, x.get("relevance_score", 0))), reverse=True)
     return sorted_results[:max_results]
 
 
-@tool
+@tool  # type: ignore[untyped-decorator]
 def validate_url(url: str) -> dict[str, Any]:
     """
     Validate if a URL is accessible and appears to be a news source.
@@ -155,7 +155,7 @@ def validate_url(url: str) -> dict[str, Any]:
         }
 
 
-@tool
+@tool  # type: ignore[untyped-decorator]
 def extract_intent(query: str) -> dict[str, Any]:
     """
     Extract structured intent from a natural language query.
@@ -313,7 +313,7 @@ Analiza la petición, busca fuentes relevantes y genera la configuración del fe
             start = text.find("{")
             end = text.rfind("}") + 1
             if start >= 0 and end > start:
-                return json.loads(text[start:end])
+                return cast(dict[str, Any], json.loads(text[start:end]))
         except json.JSONDecodeError:
             pass
 

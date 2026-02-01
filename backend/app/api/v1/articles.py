@@ -1,5 +1,6 @@
 """Articles API endpoints."""
 
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Query
@@ -52,7 +53,7 @@ async def get_article(article_id: str) -> ArticleResponse:
 
 
 @router.post("/scrape")
-async def trigger_scrape(feed_id: UUID) -> dict:
+async def trigger_scrape(feed_id: UUID) -> dict[str, Any]:
     """
     Trigger a manual scrape for all sources in a feed.
 
