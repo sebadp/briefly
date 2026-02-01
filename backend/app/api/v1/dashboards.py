@@ -31,7 +31,9 @@ async def list_dashboards(db: AsyncSession = Depends(get_db)) -> list[DashboardR
 
 
 @router.get("/{dashboard_id}", response_model=DashboardResponse)
-async def get_dashboard(dashboard_id: UUID, db: AsyncSession = Depends(get_db)) -> DashboardResponse:
+async def get_dashboard(
+    dashboard_id: UUID, db: AsyncSession = Depends(get_db)
+) -> DashboardResponse:
     """Get dashboard by ID."""
     if dashboard_id not in _dashboards_db:
         raise HTTPException(status_code=404, detail="Dashboard not found")
@@ -42,7 +44,9 @@ async def get_dashboard(dashboard_id: UUID, db: AsyncSession = Depends(get_db)) 
 
 
 @router.post("", response_model=DashboardResponse, status_code=status.HTTP_201_CREATED)
-async def create_dashboard(dashboard_in: DashboardCreate, db: AsyncSession = Depends(get_db)) -> DashboardResponse:
+async def create_dashboard(
+    dashboard_in: DashboardCreate, db: AsyncSession = Depends(get_db)
+) -> DashboardResponse:
     """
     Create a new dashboard from research results.
     Automatically creates the associated sources.

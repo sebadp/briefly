@@ -117,7 +117,9 @@ def search_news_sources(
 
     # Sort by relevance and limit
     # Use a typed key function for sorting
-    sorted_results = sorted(results, key=lambda x: int(cast(int, x.get("relevance_score", 0))), reverse=True)
+    sorted_results = sorted(
+        results, key=lambda x: int(cast(int, x.get("relevance_score", 0))), reverse=True
+    )
     return sorted_results[:max_results]
 
 

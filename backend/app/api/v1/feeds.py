@@ -25,7 +25,9 @@ _feeds_db: dict[UUID, dict[str, Any]] = {}
 async def list_feeds() -> FeedListResponse:
     """List all feeds for the current user."""
     feeds = list(_feeds_db.values())
-    return FeedListResponse(feeds=[FeedResponse.model_validate(feed) for feed in feeds], total=len(feeds))
+    return FeedListResponse(
+        feeds=[FeedResponse.model_validate(feed) for feed in feeds], total=len(feeds)
+    )
 
 
 @router.post("", response_model=FeedResponse, status_code=status.HTTP_201_CREATED)

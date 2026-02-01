@@ -17,7 +17,6 @@ except ImportError:
     genai = None  # Handle missing dependency gracefully
 
 
-
 class ResearchState(TypedDict):
     topic: str
     found_sources: list[dict[str, Any]]
@@ -253,6 +252,7 @@ class ResearchAgent:
                 )
                 if response.text:
                     import json
+
                     return dict(json.loads(response.text))
                 return {"action": "FINISH", "reason": "Empty AI response"}
             return {"action": "FINISH", "reason": "No AI client"}
@@ -286,13 +286,16 @@ class ResearchAgent:
                 )
                 if response.text:
                     import json
+
                     data = json.loads(response.text)
                     return data.get("score", 5), data.get("reason", "No reason provided")
             return 5, "No AI client"
         except Exception:
             return 10, "Error converting response"
 
-    async def _validate_candidate(self, scraper: Any, cand: dict[str, Any], topic: str) -> dict[str, Any] | None:
+    async def _validate_candidate(
+        self, scraper: Any, cand: dict[str, Any], topic: str
+    ) -> dict[str, Any] | None:
         """Validate a single candidate source. Returns dict with result or None if error."""
         url = cand["base"]
         try:

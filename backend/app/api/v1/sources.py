@@ -27,11 +27,15 @@ async def list_sources(feed_id: UUID | None = None) -> SourceListResponse:
     # I'll keep the original return for list_sources and apply the model_validate
     # to the single source in create_source, as that's the most logical interpretation
     # given the provided snippets and the goal of "Pydantic validation".
-    return SourceListResponse(sources=[SourceResponse.model_validate(s) for s in sources], total=len(sources))
+    return SourceListResponse(
+        sources=[SourceResponse.model_validate(s) for s in sources], total=len(sources)
+    )
 
 
 @router.post("", response_model=SourceResponse, status_code=status.HTTP_201_CREATED)
-async def create_source(source_in: SourceCreate, db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
+async def create_source(
+    source_in: SourceCreate, db: AsyncSession = Depends(get_db)
+) -> dict[str, Any]:
     """Add a new source to a feed."""
     from datetime import UTC, datetime
     from uuid import uuid4
@@ -166,8 +170,12 @@ async def add_source_and_scrape(url: str, name: str = "") -> dict[str, Any]:
         await scraper.close()
 
 
-@router.post("/add-and-scrape-multiple", response_model=dict[str, Any], status_code=status.HTTP_201_CREATED)
-async def add_source_and_scrape_multiple(url: str, name: str = "", article_count: int = 5) -> dict[str, Any]:
+@router.post(
+    "/add-and-scrape-multiple", response_model=dict[str, Any], status_code=status.HTTP_201_CREATED
+)
+async def add_source_and_scrape_multiple(
+    url: str, name: str = "", article_count: int = 5
+) -> dict[str, Any]:
     """
     Add a new source URL and immediately scrape multiple articles from it.
 

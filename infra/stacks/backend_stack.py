@@ -92,9 +92,7 @@ class BackendStack(Stack):
             ),
         )
 
-        container.add_port_mappings(
-            ecs.PortMapping(container_port=8000)
-        )
+        container.add_port_mappings(ecs.PortMapping(container_port=8000))
 
         # Fargate service with ALB
         self.fargate_service = ecs_patterns.ApplicationLoadBalancedFargateService(

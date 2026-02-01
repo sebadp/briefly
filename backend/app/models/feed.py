@@ -51,7 +51,9 @@ class Source(SQLModel, table=True):  # type: ignore
     source_type: str = Field(default="website", max_length=20)  # website, rss, atom
 
     # Scraping configuration (for advanced use)
-    selector_config: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON, nullable=True))
+    selector_config: dict[str, Any] | None = Field(
+        default=None, sa_column=Column(JSON, nullable=True)
+    )
 
     # Status
     is_active: bool = Field(default=True)
