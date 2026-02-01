@@ -41,11 +41,30 @@ class ResearchAgent:
             self.client = genai.Client(api_key=self.settings.gemini_api_key)
             self.model = "gemini-2.0-flash"
 
-    async def research_topic(self, topic: str) -> AsyncGenerator[str, None]:
+    async def research_topic(
+        self, topic: str, user_settings: dict[str, Any] | None = None
+    ) -> AsyncGenerator[str, None]:
         """
         Research a topic and yield streaming events.
         Events are JSON strings in SSE format.
+
+        Args:
+            topic: The topic to research
+            user_settings: Optional user settings dict with:
+                - articles_per_source: int (default 5)
+                - max_sources_per_briefing: int (default 8)
+                - min_relevance_score: int (default 7)
+                - language: str (default "es")
         """
+        # Apply user settings with defaults
+        settings_config = user_settings or {}
+        _articles_per_source = settings_config.get("articles_per_source", 5)
+        _max_sources = settings_config.get("max_sources_per_briefing", 8)
+        _min_relevance = settings_config.get("min_relevance_score", 7)
+        _language = settings_config.get("language", "es")
+        # TODO: Use these settings in the agent logic below
+
+
         try:
             # ReAct Loop
             # ReAct Loop
