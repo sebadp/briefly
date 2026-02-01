@@ -1,6 +1,7 @@
 """Feed schemas for API request/response validation."""
 
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -50,8 +51,10 @@ class FeedResponse(FeedBase):
 
     id: UUID
     created_at: datetime
-    sources: list[dict] = Field(default_factory=list)
-    ai_interpretation: dict | None = None
+    sources: list[dict[str, Any]] = Field(default_factory=list)
+    ai_interpretation: dict[str, Any] | None = None
+    details: dict[str, Any] | None = Field(default=None)
+    meta: dict[str, Any] | None = Field(default=None)
 
     class Config:
         from_attributes = True

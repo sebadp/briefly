@@ -1,18 +1,29 @@
 """Backend stack - ECS Fargate for FastAPI."""
 
-from constructs import Construct
 import aws_cdk as cdk
 from aws_cdk import (
-    Stack,
-    aws_ec2 as ec2,
-    aws_ecs as ecs,
-    aws_ecs_patterns as ecs_patterns,
-    aws_rds as rds,
-    aws_dynamodb as dynamodb,
-    aws_secretsmanager as secretsmanager,
-    aws_iam as iam,
     Duration,
+    Stack,
 )
+from aws_cdk import (
+    aws_dynamodb as dynamodb,
+)
+from aws_cdk import (
+    aws_ec2 as ec2,
+)
+from aws_cdk import (
+    aws_ecs as ecs,
+)
+from aws_cdk import (
+    aws_ecs_patterns as ecs_patterns,
+)
+from aws_cdk import (
+    aws_rds as rds,
+)
+from aws_cdk import (
+    aws_secretsmanager as secretsmanager,
+)
+from constructs import Construct
 
 
 class BackendStack(Stack):
@@ -81,9 +92,7 @@ class BackendStack(Stack):
             ),
         )
 
-        container.add_port_mappings(
-            ecs.PortMapping(container_port=8000)
-        )
+        container.add_port_mappings(ecs.PortMapping(container_port=8000))
 
         # Fargate service with ALB
         self.fargate_service = ecs_patterns.ApplicationLoadBalancedFargateService(

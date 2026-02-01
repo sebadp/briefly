@@ -2,11 +2,10 @@
 """CDK App entry point for Briefly infrastructure."""
 
 import os
+
 import aws_cdk as cdk
-
-from stacks.database_stack import DatabaseStack
 from stacks.backend_stack import BackendStack
-
+from stacks.database_stack import DatabaseStack
 
 app = cdk.App()
 

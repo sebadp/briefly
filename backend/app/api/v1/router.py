@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter
 
-from app.api.v1 import sources, articles, research, dashboards
+from app.api.v1 import articles, dashboards, research, sources
 
 api_router = APIRouter()
 

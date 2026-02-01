@@ -1,15 +1,15 @@
 """Feed service - Business logic for feed management."""
 
-from uuid import UUID
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import Any
+from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from app.models import Feed, Source
 from app.agents import interpret_feed_query, scrape_single_article
 from app.db.dynamodb import dynamodb
+from app.models import Feed, Source
 
 
 class FeedService:
@@ -44,12 +44,12 @@ class FeedService:
     ) -> tuple[Feed, dict[str, Any]]:
         """
         Create a feed from a natural language query.
-        
+
         Uses the AI agent to interpret the query and suggest sources.
         """
         # Get AI interpretation
         config = await interpret_feed_query(query)
-        
+
         # Create the feed
         feed = Feed(
             user_id=user_id,
@@ -62,7 +62,7 @@ class FeedService:
         self.session.add(feed)
         await self.session.commit()
         await self.session.refresh(feed)
-        
+
         # Add suggested sources
         for source_data in config.get("sources", []):
             source = Source(
@@ -72,9 +72,9 @@ class FeedService:
                 source_type=source_data.get("type", "website"),
             )
             self.session.add(source)
-        
+
         await self.session.commit()
-        
+
         return feed, config
 
     async def get_feed(self, feed_id: UUID) -> Feed | None:
@@ -84,9 +84,7 @@ class FeedService:
 
     async def get_user_feeds(self, user_id: UUID) -> list[Feed]:
         """Get all feeds for a user."""
-        result = await self.session.execute(
-            select(Feed).where(Feed.user_id == user_id)
-        )
+        result = await self.session.execute(select(Feed).where(Feed.user_id == user_id))
         return list(result.scalars().all())
 
     async def delete_feed(self, feed_id: UUID) -> bool:
@@ -94,7 +92,7 @@ class FeedService:
         feed = await self.get_feed(feed_id)
         if not feed:
             return False
-        
+
         await self.session.delete(feed)
         await self.session.commit()
         return True
@@ -121,31 +119,31 @@ class FeedService:
     async def scrape_feed(self, feed_id: UUID) -> dict[str, Any]:
         """
         Scrape all sources in a feed and store articles.
-        
+
         Returns stats about the scraping operation.
         """
         feed = await self.get_feed(feed_id)
         if not feed:
             return {"error": "Feed not found"}
-        
+
         # Get sources
         result = await self.session.execute(
-            select(Source).where(Source.feed_id == feed_id, Source.is_active == True)
+            select(Source).where(Source.feed_id == feed_id, Source.is_active)
         )
         sources = list(result.scalars().all())
-        
-        stats = {
+
+        stats: dict[str, Any] = {
             "feed_id": str(feed_id),
             "sources_processed": 0,
             "articles_saved": 0,
             "errors": [],
         }
-        
+
         for source in sources:
             try:
                 # Scrape the source
                 article = await scrape_single_article(source.url)
-                
+
                 if article:
                     # Save to DynamoDB
                     await dynamodb.put_article(
@@ -160,19 +158,19 @@ class FeedService:
                         thumbnail_url=article.thumbnail_url,
                     )
                     stats["articles_saved"] += 1
-                
+
                 stats["sources_processed"] += 1
-                
+
                 # Update source last_scraped_at
                 source.last_scraped_at = datetime.now(UTC)
                 source.last_error = None
-                
+
             except Exception as e:
                 stats["errors"].append({"source": source.url, "error": str(e)})
                 source.last_error = str(e)[:500]
-        
+
         # Update feed last_scraped_at
         feed.last_scraped_at = datetime.now(UTC)
         await self.session.commit()
-        
+
         return stats

@@ -5,9 +5,10 @@ Alternative to Claude scraper, using Google's Gemini model.
 
 from dataclasses import dataclass
 from datetime import datetime
-import httpx
-from bs4 import BeautifulSoup
+from typing import Any
 
+import httpx
+from bs4 import BeautifulSoup, Tag
 from google import genai
 from google.genai import types
 
@@ -17,7 +18,7 @@ from app.config import get_settings
 @dataclass
 class ScrapedArticle:
     """Represents a scraped article."""
-    
+
     title: str
     summary: str
     url: str
@@ -46,7 +47,7 @@ HTML Content:
 IMPORTANT: Return ONLY a valid JSON object. No markdown, no code blocks, no explanations.
 Ensure all strings are properly escaped (no unescaped newlines or quotes in values)."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         settings = get_settings()
         self.client = genai.Client(api_key=settings.gemini_api_key)
         self.model = "gemini-2.0-flash"
@@ -69,19 +70,23 @@ Ensure all strings are properly escaped (no unescaped newlines or quotes in valu
         try:
             html = await self.fetch_page(url)
             soup = BeautifulSoup(html, "lxml")
-            
+
             # 1. Check standard <link> tags
             feed_link = soup.find("link", type="application/rss+xml")
-            if feed_link:
-                return feed_link.get("href")
-                
+            if feed_link and hasattr(feed_link, "get"):
+                href = feed_link.get("href")
+                if isinstance(href, str):
+                    return href
+
             feed_link = soup.find("link", type="application/atom+xml")
-            if feed_link:
-                return feed_link.get("href")
-                
+            if feed_link and hasattr(feed_link, "get"):
+                href = feed_link.get("href")
+                if isinstance(href, str):
+                    return href
+
             # 2. Check for common patterns if no tag found (heuristic)
             # This is risky without verify, so we stick to tags only for reliability logic
-            
+
             return None
         except Exception:
             return None
@@ -89,22 +94,22 @@ Ensure all strings are properly escaped (no unescaped newlines or quotes in valu
     def _clean_html(self, html: str, max_length: int = 50000) -> str:
         """Clean and truncate HTML for processing."""
         soup = BeautifulSoup(html, "lxml")
-        
+
         # Remove scripts, styles, and other noise
         for element in soup(["script", "style", "nav", "footer", "header", "aside"]):
             element.decompose()
-        
+
         # Get text-relevant HTML
         article = soup.find("article") or soup.find("main") or soup.body
         if article:
             clean_html = str(article)
         else:
             clean_html = str(soup.body) if soup.body else html
-        
+
         # Truncate if too long
         if len(clean_html) > max_length:
             clean_html = clean_html[:max_length] + "..."
-        
+
         return clean_html
 
     async def scrape_article(self, url: str, source_name: str = "") -> ScrapedArticle:
@@ -112,10 +117,10 @@ Ensure all strings are properly escaped (no unescaped newlines or quotes in valu
         # Fetch the page
         html = await self.fetch_page(url)
         clean_html = self._clean_html(html)
-        
+
         # Use Gemini to extract article data
         prompt = self.EXTRACTION_PROMPT.format(html_content=clean_html)
-        
+
         response = self.client.models.generate_content(
             model=self.model,
             contents=prompt,
@@ -124,29 +129,29 @@ Ensure all strings are properly escaped (no unescaped newlines or quotes in valu
                 max_output_tokens=2000,
             ),
         )
-        
+
         # Parse JSON response
         try:
             import json
             import re
-            
+
             # Clean markdown code blocks if present
-            text = response.text.strip()
+            text = (response.text or "").strip()
             if text.startswith("```"):
                 text = text.split("\n", 1)[1]
                 text = text.rsplit("```", 1)[0]
-            
+
             # Additional cleaning for common JSON issues
             # 1. Remove control characters that break JSON
-            text = re.sub(r'[\x00-\x1f\x7f-\x9f]', ' ', text)
-            
+            text = re.sub(r"[\x00-\x1f\x7f-\x9f]", " ", text)
+
             # 2. Try to find the JSON object boundaries
-            json_match = re.search(r'\{[\s\S]*\}', text)
+            json_match = re.search(r"\{[\s\S]*\}", text)
             if json_match:
                 text = json_match.group(0)
-            
+
             data = json.loads(text)
-            
+
             # Parse published_at if present
             published_at = None
             if data.get("published_at"):
@@ -156,7 +161,7 @@ Ensure all strings are properly escaped (no unescaped newlines or quotes in valu
                     )
                 except ValueError:
                     pass
-            
+
             return ScrapedArticle(
                 title=data.get("title", "Untitled"),
                 summary=data.get("summary", ""),
@@ -167,18 +172,19 @@ Ensure all strings are properly escaped (no unescaped newlines or quotes in valu
                 image_url=data.get("image_url"),
                 full_content=data.get("full_content"),
             )
-        except (json.JSONDecodeError, KeyError) as e:
+        except (json.JSONDecodeError, KeyError):
             # Fallback: try regex extraction from the raw response
             import re
-            raw = response.text
-            
+
+            raw = response.text or ""
+
             title_match = re.search(r'"title"\s*:\s*"([^"]+)"', raw)
             summary_match = re.search(r'"summary"\s*:\s*"([^"]+)"', raw)
             author_match = re.search(r'"author"\s*:\s*"([^"]+)"', raw)
-            
+
             title = title_match.group(1) if title_match else None
             summary = summary_match.group(1) if summary_match else None
-            
+
             # If regex extracted data, use it
             if title or summary:
                 return ScrapedArticle(
@@ -188,25 +194,25 @@ Ensure all strings are properly escaped (no unescaped newlines or quotes in valu
                     source_name=source_name or self._extract_domain(url),
                     author=author_match.group(1) if author_match else None,
                 )
-            
+
             # Last resort: basic BeautifulSoup extraction
             soup = BeautifulSoup(html, "lxml")
             title = soup.title.string if soup.title else "Untitled"
-            
+
             # Try to get first paragraph as summary
             first_p = soup.find("p")
-            fallback_summary = first_p.get_text(strip=True)[:300] if first_p else "Could not extract content"
-            
+            fallback_summary = (
+                first_p.get_text(strip=True)[:300] if first_p else "Could not extract content"
+            )
+
             return ScrapedArticle(
-                title=title,
+                title=title or "Untitled",
                 summary=fallback_summary,
                 url=url,
                 source_name=source_name or self._extract_domain(url),
             )
 
-    async def scrape_articles(
-        self, urls: list[str], source_name: str = ""
-    ) -> list[ScrapedArticle]:
+    async def scrape_articles(self, urls: list[str], source_name: str = "") -> list[ScrapedArticle]:
         """Scrape multiple articles."""
         articles = []
         # TODO: Run in parallel
@@ -218,102 +224,141 @@ Ensure all strings are properly escaped (no unescaped newlines or quotes in valu
                 print(f"Error scraping {url}: {e}")
         return articles
 
-    async def scrape_multiple_from_homepage(
-        self, url: str, limit: int = 5
-    ) -> list[ScrapedArticle]:
+    async def scrape_multiple_from_homepage(self, url: str, limit: int = 5) -> list[ScrapedArticle]:
         """
         Scrape multiple full articles from a homepage using Gemini.
-        Note: Gemini agent doesn't have a specific list extractor yet, 
+        Note: Gemini agent doesn't have a specific list extractor yet,
         so we'll extract links from HTML using BS4 first.
         """
         html = await self.fetch_page(url)
         soup = BeautifulSoup(html, "lxml")
-        
+
         # Simple heuristic to find article links
         # Look for links inside typical article containers
         article_urls = set()
         domain = self._extract_domain(url)
-        
+
         from urllib.parse import urljoin, urlparse
+
         base_domain = urlparse(url).netloc
-        
+
         for a in soup.find_all("a", href=True):
-            href = a["href"]
+            if not isinstance(a, Tag):
+                continue
+            href = a.get("href")
+            if not isinstance(href, str):
+                continue
             full_url = urljoin(url, href)
             if urlparse(full_url).netloc == base_domain:
                 # Avoid root, admin, tag, etc.
                 path = urlparse(full_url).path
-                
-                
+
                 # Heuristic: Avoid common non-article paths
-                path_lower = path.lower()
-                
+                path_lower = str(path).lower()
+
                 # Exclude obvious non-articles
-                if any(x in path_lower for x in ["/tag/", "/category/", "/author/", "/login", "/signup", "/contact", "/policy", "/terms", "/cookies", "/pricing", "/features", "/product", "/careers", "/about", "/legal", "/security"]):
+                if any(
+                    x in path_lower
+                    for x in [
+                        "/tag/",
+                        "/category/",
+                        "/author/",
+                        "/login",
+                        "/signup",
+                        "/contact",
+                        "/policy",
+                        "/terms",
+                        "/cookies",
+                        "/pricing",
+                        "/features",
+                        "/product",
+                        "/careers",
+                        "/about",
+                        "/legal",
+                        "/security",
+                    ]
+                ):
                     continue
-                    
-                # Strict Mode: URL must look like an article 
+
+                # Strict Mode: URL must look like an article
                 # (contains date or /news/, /blog/, /post/, or is significantly long with dashes)
                 is_likely_article = False
-                
-                if len(path) > 20 and "-" in path:
-                     is_likely_article = True
-                elif any(x in path_lower for x in ["/news/", "/blog/", "/press/", "/posts/", "/2024/", "/2025/"]):
-                     is_likely_article = True
-                
+
+                if path and len(path) > 20 and "-" in path:
+                    is_likely_article = True
+                elif any(
+                    x in path_lower
+                    for x in ["/news/", "/blog/", "/press/", "/posts/", "/2024/", "/2025/"]
+                ):
+                    is_likely_article = True
+
                 if is_likely_article:
                     article_urls.add(full_url)
-                    
+
         # Limit to requested count (request extra to account for failures)
         # +3 buffer
-        to_scrape = list(article_urls)[:limit + 3]
+        to_scrape = list(article_urls)[: limit + 3]
         articles = await self.scrape_articles(to_scrape, source_name=domain)
-        
+
         # Post-validation: Ensure content is not a policy page
         valid_articles = [a for a in articles if self._is_meaningful_article(a)]
-        
+
         # Return only the requested amount
         return valid_articles[:limit]
-        
+
     def _is_meaningful_article(self, article: ScrapedArticle) -> bool:
         """Check if article looks like real content, not a policy/cookie page."""
         if not article.title or not article.summary:
             return False
-            
+
         title_lower = article.title.lower()
-        if any(x in title_lower for x in ["cookie", "privacy policy", "aviso legal", "terminos", "conditions", "subscribe", "login", "politica"]):
+        if any(
+            x in title_lower
+            for x in [
+                "cookie",
+                "privacy policy",
+                "aviso legal",
+                "terminos",
+                "conditions",
+                "subscribe",
+                "login",
+                "politica",
+            ]
+        ):
             return False
-            
+
         # Stricter length check
         if len(article.summary) < 50:
             return False
-            
+
         # Check against "Untitled" and "Home"
         if article.title.strip().lower() in ["untitled", "home", "homepage", "index", "welcome"]:
-             return False
+            return False
 
         return True
 
     def _extract_domain(self, url: str) -> str:
         """Extract domain name from URL."""
         from urllib.parse import urlparse
+
         parsed = urlparse(url)
         domain = parsed.netloc.replace("www.", "")
         return domain.split(".")[0].title()
 
-    async def close(self):
+    async def close(self) -> None:
         """Close HTTP client."""
         await self.http_client.aclose()
 
 
 # Factory function to get the appropriate scraper
-def get_scraper_agent():
+def get_scraper_agent() -> Any:
     """Get scraper agent based on configured LLM provider."""
     settings = get_settings()
-    
+
     if settings.llm_provider == "gemini":
         return GeminiScraperAgent()
     else:
         # Default to Claude
         from app.agents.scraper_agent import ScraperAgent
+
         return ScraperAgent()

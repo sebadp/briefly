@@ -1,6 +1,7 @@
 """Application configuration using pydantic-settings."""
 
 from functools import lru_cache
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -23,7 +24,7 @@ class Settings(BaseSettings):
     llm_provider: str = "anthropic"  # "anthropic" or "gemini"
     anthropic_api_key: str = ""
     gemini_api_key: str = ""
-    
+
     # Search
     tavily_api_key: str = ""
     google_search_api_key: str = ""

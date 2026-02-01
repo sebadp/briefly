@@ -1,7 +1,7 @@
 """DynamoDB connection and table management for articles."""
 
+from datetime import UTC, datetime
 from typing import Any
-from datetime import datetime, UTC
 from uuid import UUID
 
 import aioboto3
@@ -15,18 +15,16 @@ class DynamoDBClient:
 
     TABLE_NAME = "briefly-articles"
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.settings = get_settings()
         self.session = aioboto3.Session(
             aws_access_key_id=self.settings.aws_access_key_id,
             aws_secret_access_key=self.settings.aws_secret_access_key,
             region_name=self.settings.aws_region,
         )
-        self.config = Config(
-            retries={"max_attempts": 3, "mode": "adaptive"}
-        )
+        self.config = Config(retries={"max_attempts": 3, "mode": "adaptive"})
 
-    async def get_client(self):
+    async def get_client(self) -> Any:
         """Get DynamoDB client context manager."""
         kwargs = {"config": self.config}
         if self.settings.dynamodb_endpoint_url:
@@ -69,7 +67,7 @@ class DynamoDBClient:
     ) -> dict[str, Any]:
         """Store an article in DynamoDB."""
         now = datetime.now(UTC)
-        
+
         # DynamoDB item
         item = {
             "pk": {"S": f"FEED#{feed_id}"},
@@ -84,7 +82,7 @@ class DynamoDBClient:
             # TTL: 30 days from now
             "ttl": {"N": str(int(now.timestamp()) + 30 * 24 * 60 * 60)},
         }
-        
+
         if published_at:
             item["published_at"] = {"S": published_at.isoformat()}
         if thumbnail_url:
@@ -92,7 +90,7 @@ class DynamoDBClient:
 
         async with await self.get_client() as client:
             await client.put_item(TableName=self.TABLE_NAME, Item=item)
-        
+
         return {"article_id": article_id, "status": "created"}
 
     async def get_articles_by_feed(
@@ -109,21 +107,23 @@ class DynamoDBClient:
                 ScanIndexForward=False,  # Descending order (newest first)
                 Limit=limit,
             )
-        
+
         articles = []
         for item in response.get("Items", []):
-            articles.append({
-                "id": item.get("article_id", {}).get("S"),
-                "title": item.get("title", {}).get("S"),
-                "summary": item.get("summary", {}).get("S"),
-                "url": item.get("url", {}).get("S"),
-                "source_url": item.get("source_url", {}).get("S"),
-                "source_name": item.get("source_name", {}).get("S"),
-                "published_at": item.get("published_at", {}).get("S"),
-                "scraped_at": item.get("scraped_at", {}).get("S"),
-                "thumbnail_url": item.get("thumbnail_url", {}).get("S"),
-            })
-        
+            articles.append(
+                {
+                    "id": item.get("article_id", {}).get("S"),
+                    "title": item.get("title", {}).get("S"),
+                    "summary": item.get("summary", {}).get("S"),
+                    "url": item.get("url", {}).get("S"),
+                    "source_url": item.get("source_url", {}).get("S"),
+                    "source_name": item.get("source_name", {}).get("S"),
+                    "published_at": item.get("published_at", {}).get("S"),
+                    "scraped_at": item.get("scraped_at", {}).get("S"),
+                    "thumbnail_url": item.get("thumbnail_url", {}).get("S"),
+                }
+            )
+
         return articles
 
 

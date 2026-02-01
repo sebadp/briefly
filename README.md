@@ -28,6 +28,8 @@ briefly/
 | **DB Relacional** | PostgreSQL |
 | **DB NoSQL** | DynamoDB |
 | **Frontend** | Next.js 14, TypeScript, Tailwind CSS, shadcn/ui |
+| **CI/CD** | GitHub Actions (Tests, Linting, Mypy) |
+| **Code Review** | **Custom AI Reviewer** (Gemini 2.0 Flash) |
 | **Infra** | AWS CDK, ECS Fargate, RDS, Amplify |
 
 ---
@@ -111,13 +113,14 @@ Technical documentation:
 
 ### Core Flow
 1. **Describe** what you want to follow in natural language
-2. **Research Agent** automatically searches and validates sources
+2. **Research Agent (ReAct)** autonomously searches, reasons, and validates sources
 3. **Briefing** is created with curated articles
 4. **Auto-refresh** keeps content updated
 
 ### Features
-- **🧠 Research Agent**: AI autonomously investigates topics and finds sources
-- **🤖 Multi-LLM Scraping**: Claude or Gemini extracts structured content
+- **🧠 Research Agent v2.0**: Autonomous ReAct loop that plans searches and verifies content relevance
+- **🤖 AI Code Reviewer**: Internal agent that reviews Pull Requests using Gemini Flash
+- **🔍 Multi-LLM Scraping**: Claude (Validation) or Gemini (Extraction) support
 - **🔎 Smart Search**: Tavily/Google API with web scraping fallback
 - **📚 Briefings**: Grouped articles by source with descriptions
 - **🎯 Quick Topics**: One-click topic suggestions on home page
@@ -153,8 +156,18 @@ mypy .
 # Frontend
 cd frontend
 npm run lint
+npm run lint
 npm run typecheck
 ```
+
+### CI/CD & AI Review
+The project includes a GitHub Actions pipeline (`.github/workflows`):
+- **CI**: Runs tests, ruff, and mypy on every push.
+- **AI Reviewer**: A custom Python script (`scripts/ai_reviewer.py`) that uses Gemini to review PRs automatically.
+
+**Setup Secrets in GitHub**:
+- `GEMINI_API_KEY`: For the AI Reviewer.
+- `ANTHROPIC_API_KEY`: For backend tests.
 
 ---
 

@@ -1,15 +1,16 @@
 """Dashboard model for PostgreSQL."""
 
-from datetime import datetime, UTC
+from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import Column, JSON
-from sqlmodel import Field, SQLModel, Relationship
-from typing import Optional
+from sqlalchemy import JSON, Column
+from sqlmodel import Field, SQLModel
 
 # Circular import prevention: referencing Source by compatible string or just importing if safe
 # Since Source is in models/feed.py, we might need to refactor or cross-import carefully.
 # For now, let's keep Dashboard independent or import Source there.
+
 
 class Dashboard(SQLModel, table=True):
     """
@@ -20,19 +21,20 @@ class Dashboard(SQLModel, table=True):
     __tablename__ = "dashboards"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    
+
     # Metadata
     topic: str = Field(max_length=200)
     name: str = Field(max_length=100)
-    description: Optional[str] = Field(default=None)
-    
+    description: str | None = Field(default=None)
+
     # Configuration
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
-    
+
     # The JSON list of source configurations found during research
     # We store them here as a snapshot, but they will also be created as actual Sources
-    research_results: dict = Field(default={}, sa_column=Column(JSON))
-    
+    research_results: dict[str, Any] = Field(default={}, sa_column=Column(JSON))
+    layout: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
+
     # Status
     is_active: bool = Field(default=True)

@@ -1,15 +1,21 @@
 """Database stack - RDS PostgreSQL and DynamoDB."""
 
-from constructs import Construct
 import aws_cdk as cdk
 from aws_cdk import (
-    Stack,
-    aws_ec2 as ec2,
-    aws_rds as rds,
-    aws_dynamodb as dynamodb,
-    RemovalPolicy,
     Duration,
+    RemovalPolicy,
+    Stack,
 )
+from aws_cdk import (
+    aws_dynamodb as dynamodb,
+)
+from aws_cdk import (
+    aws_ec2 as ec2,
+)
+from aws_cdk import (
+    aws_rds as rds,
+)
+from constructs import Construct
 
 
 class DatabaseStack(Stack):
@@ -56,17 +62,13 @@ class DatabaseStack(Stack):
         self.database = rds.DatabaseInstance(
             self,
             "BrieflyDatabase",
-            engine=rds.DatabaseInstanceEngine.postgres(
-                version=rds.PostgresEngineVersion.VER_15_4
-            ),
+            engine=rds.DatabaseInstanceEngine.postgres(version=rds.PostgresEngineVersion.VER_15_4),
             instance_type=ec2.InstanceType.of(
                 ec2.InstanceClass.T3,
                 ec2.InstanceSize.MICRO,  # Free tier eligible
             ),
             vpc=self.vpc,
-            vpc_subnets=ec2.SubnetSelection(
-                subnet_type=ec2.SubnetType.PRIVATE_ISOLATED
-            ),
+            vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_ISOLATED),
             security_groups=[db_security_group],
             database_name="briefly",
             credentials=rds.Credentials.from_generated_secret("briefly_admin"),

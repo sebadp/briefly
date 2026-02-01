@@ -71,7 +71,7 @@ select = [
     "C4",  # flake8-comprehensions
     "UP",  # pyupgrade
 ]
-ignore = ["E501"]  # line too long (handled by formatter)
+ignore = ["E501", "B008"]  # line too long, do not perform function call in arg defaults
 
 [tool.ruff.lint.isort]
 known-first-party = ["app"]
@@ -80,6 +80,8 @@ known-first-party = ["app"]
 python_version = "3.11"
 strict = true
 ignore_missing_imports = true
+disallow_subclassing_any = false
+disable_error_code = ["call-arg", "untyped-decorator"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

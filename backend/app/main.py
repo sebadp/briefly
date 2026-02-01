@@ -1,13 +1,13 @@
 """FastAPI application entry point."""
 
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.config import get_settings
 from app.api.v1.router import api_router
+from app.config import get_settings
 
 
 @asynccontextmanager
@@ -16,13 +16,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Startup
     settings = get_settings()
     print(f"🚀 Starting {settings.app_name} in {settings.environment} mode")
-    
+
     # TODO: Initialize database connections
     # await init_postgres()
     # await init_dynamodb()
-    
+
     yield
-    
+
     # Shutdown
     print("👋 Shutting down...")
     # TODO: Close database connections

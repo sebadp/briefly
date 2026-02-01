@@ -1,15 +1,18 @@
 """Sources API endpoints."""
 
+from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.schemas.source import SourceCreate, SourceResponse, SourceListResponse
+from app.db.postgres import get_session as get_db
+from app.schemas.source import SourceCreate, SourceListResponse, SourceResponse
 
 router = APIRouter()
 
 # In-memory storage for MVP
-_sources_db: dict[UUID, dict] = {}
+_sources_db: dict[UUID, dict[str, Any]] = {}
 
 
 @router.get("", response_model=SourceListResponse)
@@ -18,14 +21,24 @@ async def list_sources(feed_id: UUID | None = None) -> SourceListResponse:
     sources = list(_sources_db.values())
     if feed_id:
         sources = [s for s in sources if s.get("feed_id") == feed_id]
-    return SourceListResponse(sources=sources, total=len(sources))
+    # The instruction's return statement `return [SourceResponse.model_validate(source) for source in sources]`
+    # seems intended for a function returning a list of SourceResponse, but list_sources returns SourceListResponse.
+    # To make it syntactically correct and align with the response_model,
+    # I'll keep the original return for list_sources and apply the model_validate
+    # to the single source in create_source, as that's the most logical interpretation
+    # given the provided snippets and the goal of "Pydantic validation".
+    return SourceListResponse(
+        sources=[SourceResponse.model_validate(s) for s in sources], total=len(sources)
+    )
 
 
 @router.post("", response_model=SourceResponse, status_code=status.HTTP_201_CREATED)
-async def create_source(source_in: SourceCreate) -> SourceResponse:
+async def create_source(
+    source_in: SourceCreate, db: AsyncSession = Depends(get_db)
+) -> dict[str, Any]:
     """Add a new source to a feed."""
+    from datetime import UTC, datetime
     from uuid import uuid4
-    from datetime import datetime, UTC
 
     source_id = uuid4()
     source = {
@@ -38,7 +51,10 @@ async def create_source(source_in: SourceCreate) -> SourceResponse:
         "is_active": True,
     }
     _sources_db[source_id] = source
-    return SourceResponse(**source)
+    # The instruction's return statement `return [SourceResponse.model_validate(source) for source in sources]`
+    # was likely a copy-paste error. For create_source, it should return a single SourceResponse.
+    # Applying model_validate to the single created source, consistent with the new return type hint.
+    return SourceResponse.model_validate(source).model_dump()
 
 
 @router.get("/{source_id}", response_model=SourceResponse)
@@ -63,17 +79,17 @@ async def delete_source(source_id: UUID) -> None:
     del _sources_db[source_id]
 
 
-@router.post("/{source_id}/validate", response_model=dict)
-async def validate_source(source_id: UUID) -> dict:
+@router.post("/{source_id}/validate", response_model=dict[str, Any])
+async def validate_source(source_id: UUID) -> dict[str, Any]:
     """Validate that a source URL is accessible and can be scraped."""
     if source_id not in _sources_db:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Source {source_id} not found",
         )
-    
+
     source = _sources_db[source_id]
-    
+
     # TODO: Actually validate the URL with httpx
     return {
         "source_id": source_id,
@@ -83,25 +99,26 @@ async def validate_source(source_id: UUID) -> dict:
     }
 
 
-@router.post("/add-and-scrape", response_model=dict, status_code=status.HTTP_201_CREATED)
-async def add_source_and_scrape(url: str, name: str = "") -> dict:
+@router.post("/add-and-scrape", response_model=dict[str, Any], status_code=status.HTTP_201_CREATED)
+async def add_source_and_scrape(url: str, name: str = "") -> dict[str, Any]:
     """
     Add a new source URL and immediately scrape it.
-    
+
     Returns the scraped article content and creates the source.
     """
+    from datetime import UTC, datetime
     from uuid import uuid4
-    from datetime import datetime, UTC
+
     from app.agents import get_scraper_agent
-    
+
     # Create source entry
     source_id = uuid4()
-    
+
     # Scrape the URL
     scraper = get_scraper_agent()
     try:
         article = await scraper.scrape_article(url, name or "")
-        
+
         # Save source with scraped data preview
         source = {
             "id": source_id,
@@ -116,7 +133,7 @@ async def add_source_and_scrape(url: str, name: str = "") -> dict:
             "last_article_summary": article.summary[:200] if article.summary else "",
         }
         _sources_db[source_id] = source
-        
+
         return {
             "source": source,
             "scraped_article": {
@@ -143,7 +160,7 @@ async def add_source_and_scrape(url: str, name: str = "") -> dict:
             "scrape_error": str(e),
         }
         _sources_db[source_id] = source
-        
+
         return {
             "source": source,
             "scraped_article": None,
@@ -153,53 +170,54 @@ async def add_source_and_scrape(url: str, name: str = "") -> dict:
         await scraper.close()
 
 
-@router.post("/add-and-scrape-multiple", response_model=dict, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/add-and-scrape-multiple", response_model=dict[str, Any], status_code=status.HTTP_201_CREATED
+)
 async def add_source_and_scrape_multiple(
-    url: str, 
-    name: str = "", 
-    article_count: int = 5
-) -> dict:
+    url: str, name: str = "", article_count: int = 5
+) -> dict[str, Any]:
     """
     Add a new source URL and immediately scrape multiple articles from it.
-    
+
     Args:
         url: URL of the news source homepage/section
         name: Optional name for the source
         article_count: Number of articles to scrape (default 5, max 20)
-        
+
     Returns:
         Source object and list of scraped articles
     """
+    from datetime import UTC, datetime
     from uuid import uuid4
-    from datetime import datetime, UTC
+
     from app.agents import get_scraper_agent
-    
+
     # Validate count
     if article_count < 1:
         article_count = 1
     if article_count > 20:
         article_count = 20
-    
+
     # Create source entry (or update if I had persistence, but MVP is in-memory)
-    # Check if exists first? MVP simplifies to just creating new ID most likely, 
+    # Check if exists first? MVP simplifies to just creating new ID most likely,
     # but let's check by URL to be nicer
     existing_id = None
     for sid, s in _sources_db.items():
         if s["url"] == url:
             existing_id = sid
             break
-            
+
     source_id = existing_id or uuid4()
-    
+
     # Scrape the URL
     scraper = get_scraper_agent()
     try:
         articles = await scraper.scrape_multiple_from_homepage(url, limit=article_count)
-        
+
         # Convert to dicts for response
         scraped_data = []
         last_article = None
-        
+
         for art in articles:
             # Handle both ExtractedArticle (Claude) and ScrapedArticle (Gemini) types
             # They have slightly different fields but compatible enough
@@ -214,7 +232,7 @@ async def add_source_and_scrape_multiple(
             }
             scraped_data.append(art_dict)
             last_article = art
-            
+
         # Update/Create source
         if existing_id:
             source = _sources_db[existing_id]
@@ -228,17 +246,19 @@ async def add_source_and_scrape_multiple(
                 "created_at": datetime.now(UTC),
                 "is_active": True,
             }
-            
+
         # Update scrape stats
         source["last_scraped_at"] = datetime.now(UTC)
         if last_article:
             source["last_article_title"] = last_article.title
-            source["last_article_summary"] =  last_article.summary[:200] if last_article.summary else ""
+            source["last_article_summary"] = (
+                last_article.summary[:200] if last_article.summary else ""
+            )
             if not source["name"] and getattr(last_article, "source_name", None):
                 source["name"] = last_article.source_name
-                
+
         _sources_db[source_id] = source
-        
+
         return {
             "source": source,
             "scraped_articles": scraped_data,
@@ -259,7 +279,7 @@ async def add_source_and_scrape_multiple(
             "scrape_error": str(e),
         }
         _sources_db[source_id] = source
-        
+
         return {
             "source": source,
             "scraped_articles": [],
@@ -268,4 +288,3 @@ async def add_source_and_scrape_multiple(
         }
     finally:
         await scraper.close()
-

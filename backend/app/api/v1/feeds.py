@@ -1,35 +1,40 @@
 """Feeds API endpoints."""
 
+from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db.postgres import get_session as get_db
 from app.schemas.feed import (
     FeedCreate,
     FeedCreateFromNL,
-    FeedResponse,
     FeedListResponse,
+    FeedResponse,
 )
 
 router = APIRouter()
 
 
 # In-memory storage for MVP (will be replaced with PostgreSQL)
-_feeds_db: dict[UUID, dict] = {}
+_feeds_db: dict[UUID, dict[str, Any]] = {}
 
 
 @router.get("", response_model=FeedListResponse)
 async def list_feeds() -> FeedListResponse:
     """List all feeds for the current user."""
     feeds = list(_feeds_db.values())
-    return FeedListResponse(feeds=feeds, total=len(feeds))
+    return FeedListResponse(
+        feeds=[FeedResponse.model_validate(feed) for feed in feeds], total=len(feeds)
+    )
 
 
 @router.post("", response_model=FeedResponse, status_code=status.HTTP_201_CREATED)
-async def create_feed(feed_in: FeedCreate) -> FeedResponse:
+async def create_feed(feed_in: FeedCreate, db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
     """Create a new feed with explicit configuration."""
+    from datetime import UTC, datetime
     from uuid import uuid4
-    from datetime import datetime, UTC
 
     feed_id = uuid4()
     feed = {
@@ -41,7 +46,7 @@ async def create_feed(feed_in: FeedCreate) -> FeedResponse:
         "sources": [],
     }
     _feeds_db[feed_id] = feed
-    return FeedResponse(**feed)
+    return FeedResponse.model_validate(feed).model_dump()
 
 
 @router.post(
@@ -52,13 +57,13 @@ async def create_feed(feed_in: FeedCreate) -> FeedResponse:
 async def create_feed_from_natural_language(request: FeedCreateFromNL) -> FeedResponse:
     """
     Create a feed from a natural language description.
-    
+
     Example: "Noticias de tecnología e IA en español"
-    
+
     The AI agent will interpret the query and suggest relevant sources.
     """
+    from datetime import UTC, datetime
     from uuid import uuid4
-    from datetime import datetime, UTC
 
     # TODO: Use Strands agent to interpret the query
     # For now, create a basic feed
@@ -76,7 +81,7 @@ async def create_feed_from_natural_language(request: FeedCreateFromNL) -> FeedRe
         },
     }
     _feeds_db[feed_id] = feed
-    return FeedResponse(**feed)
+    return FeedResponse.model_validate(feed)
 
 
 @router.get("/{feed_id}", response_model=FeedResponse)
@@ -87,7 +92,7 @@ async def get_feed(feed_id: UUID) -> FeedResponse:
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Feed {feed_id} not found",
         )
-    return FeedResponse(**_feeds_db[feed_id])
+    return FeedResponse.model_validate(_feeds_db[feed_id])
 
 
 @router.delete("/{feed_id}", status_code=status.HTTP_204_NO_CONTENT)
