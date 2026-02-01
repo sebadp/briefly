@@ -32,7 +32,8 @@ class Dashboard(SQLModel, table=True):
 
     # The JSON list of source configurations found during research
     # We store them here as a snapshot, but they will also be created as actual Sources
-    research_results: dict = Field(default={}, sa_column=Column(JSON))
+    research_results: dict[str, Any] = Field(default={}, sa_column=Column(JSON))
+    layout: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
 
     # Status
     is_active: bool = Field(default=True)

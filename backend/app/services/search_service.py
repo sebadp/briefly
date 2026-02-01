@@ -11,7 +11,7 @@ from app.config import get_settings
 class SearchService:
     """Service for searching web content using Google API with scraping fallback."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.settings = get_settings()
         self.http_client = httpx.AsyncClient(
             timeout=10.0,
@@ -90,7 +90,7 @@ class SearchService:
             "num": min(num, 10),  # API limits to 10 per request
         }
 
-        resp = await self.http_client.get(url, params=params)
+        resp = await self.http_client.get(url, params=params)  # type: ignore
         resp.raise_for_status()
         data = resp.json()
 
@@ -152,5 +152,5 @@ class SearchService:
             print(f"Fallback search failed: {e}")
             return []
 
-    async def close(self):
+    async def close(self) -> None:
         await self.http_client.aclose()

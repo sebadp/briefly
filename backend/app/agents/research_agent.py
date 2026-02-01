@@ -4,7 +4,7 @@ import asyncio
 import json
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, TypedDict
 
 from app.agents import get_scraper_agent
 from app.config import get_settings
@@ -17,13 +17,22 @@ except ImportError:
     genai = None  # Handle missing dependency gracefully
 
 
+
+class ResearchState(TypedDict):
+    topic: str
+    found_sources: list[dict[str, Any]]
+    attempted_queries: list[str]
+    steps_taken: int
+    max_steps: int
+
+
 class ResearchAgent:
     """
     Agent that performs deep research to find news sources for a topic.
     Designed for streaming output of its thought process.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.search_service = SearchService()
         self.settings = get_settings()
 
@@ -40,7 +49,8 @@ class ResearchAgent:
         """
         try:
             # ReAct Loop
-            state = {
+            # ReAct Loop
+            state: ResearchState = {
                 "topic": topic,
                 "found_sources": [],
                 "attempted_queries": [],
@@ -74,10 +84,11 @@ class ResearchAgent:
 
                 # 2. ACT: Search
                 query = decision.get("query")
-                state["attempted_queries"].append(query)
+                if isinstance(query, str):
+                    state["attempted_queries"].append(query)
                 yield self._event("log", f"🚀 Acción: Buscar '{query}' ({reason})")
 
-                results = await self.search_service.search(query, num_results=5)
+                results = await self.search_service.search(str(query), num_results=5)
 
                 # Filter seen domains
                 new_candidates = []
@@ -114,7 +125,9 @@ class ResearchAgent:
                     if res:
                         yield self._event("log", res["log_msg"])
                         if res.get("valid"):
-                            state["found_sources"].append(res["source_data"])
+                            source_data = res.get("source_data")
+                            if isinstance(source_data, dict):
+                                state["found_sources"].append(source_data)  # type: ignore
                             added_count += 1
 
                 yield self._event(
@@ -177,7 +190,7 @@ class ResearchAgent:
         """
         pass
 
-    def _check_frequency(self, articles: list) -> tuple[bool, str]:
+    def _check_frequency(self, articles: list[Any]) -> tuple[bool, str]:
         """Check if at least 1 article is from the last 90 days."""
         # Note: If published_at is None, we assume valid (optimistic)
         # In a real scenario, we might want to be stricter or try to parse date from text
@@ -200,7 +213,7 @@ class ResearchAgent:
 
         return False, "Old content"
 
-    async def _decide_next_step(self, state: dict) -> dict:
+    async def _decide_next_step(self, state: ResearchState) -> dict[str, Any]:
         """Decide next action: SEARCH more or FINISH."""
         # Heuristic fallback if no LLM
         if not self.client:
@@ -232,19 +245,22 @@ class ResearchAgent:
         OR {{"action": "FINISH", "reason": "why"}}"""
 
         try:
-            response = self.client.models.generate_content(
-                model=self.model,
-                contents=prompt,
-                config=types.GenerateContentConfig(response_mime_type="application/json"),
-            )
-            import json
-
-            return json.loads(response.text)
+            if self.client:
+                response = self.client.models.generate_content(
+                    model=self.model,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(response_mime_type="application/json"),
+                )
+                if response.text:
+                    import json
+                    return dict(json.loads(response.text))
+                return {"action": "FINISH", "reason": "Empty AI response"}
+            return {"action": "FINISH", "reason": "No AI client"}
         except Exception as e:
             print(f"Decision Error: {e}")
             return {"action": "FINISH", "reason": "Error in decision logic"}
 
-    async def _score_relevance(self, topic: str, articles: list) -> tuple[int, str]:
+    async def _score_relevance(self, topic: str, articles: list[Any]) -> tuple[int, str]:
         """Score the relevance of the source based on article titles."""
         titles = [f"- {a.title} ({a.summary[:100]}...)" for a in articles[:5]]
         titles_text = "\n".join(titles)
@@ -262,19 +278,21 @@ class ResearchAgent:
         Return JSON: {{"score": 8, "reason": "..."}}"""
 
         try:
-            response = self.client.models.generate_content(
-                model=self.model,
-                contents=prompt,
-                config=types.GenerateContentConfig(response_mime_type="application/json"),
-            )
-            import json
-
-            data = json.loads(response.text)
-            return data.get("score", 5), data.get("reason", "No reason provided")
+            if self.client:
+                response = self.client.models.generate_content(
+                    model=self.model,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(response_mime_type="application/json"),
+                )
+                if response.text:
+                    import json
+                    data = json.loads(response.text)
+                    return data.get("score", 5), data.get("reason", "No reason provided")
+            return 5, "No AI client"
         except Exception:
             return 10, "Error converting response"
 
-    async def _validate_candidate(self, scraper: Any, cand: dict, topic: str) -> dict | None:
+    async def _validate_candidate(self, scraper: Any, cand: dict[str, Any], topic: str) -> dict[str, Any] | None:
         """Validate a single candidate source. Returns dict with result or None if error."""
         url = cand["base"]
         try:
@@ -328,5 +346,5 @@ class ResearchAgent:
         except Exception:
             return {"valid": False, "log_msg": f"❌ Error accediendo a {url}"}
 
-    async def close(self):
+    async def close(self) -> None:
         await self.search_service.close()

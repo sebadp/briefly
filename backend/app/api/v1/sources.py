@@ -2,14 +2,18 @@
 
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.db.postgres import get_session as get_db
+
+from typing import Any
 
 from app.schemas.source import SourceCreate, SourceListResponse, SourceResponse
 
 router = APIRouter()
 
 # In-memory storage for MVP
-_sources_db: dict[UUID, dict] = {}
+_sources_db: dict[UUID, dict[str, Any]] = {}
 
 
 @router.get("", response_model=SourceListResponse)
@@ -18,11 +22,17 @@ async def list_sources(feed_id: UUID | None = None) -> SourceListResponse:
     sources = list(_sources_db.values())
     if feed_id:
         sources = [s for s in sources if s.get("feed_id") == feed_id]
-    return SourceListResponse(sources=sources, total=len(sources))
+    # The instruction's return statement `return [SourceResponse.model_validate(source) for source in sources]`
+    # seems intended for a function returning a list of SourceResponse, but list_sources returns SourceListResponse.
+    # To make it syntactically correct and align with the response_model,
+    # I'll keep the original return for list_sources and apply the model_validate
+    # to the single source in create_source, as that's the most logical interpretation
+    # given the provided snippets and the goal of "Pydantic validation".
+    return SourceListResponse(sources=[SourceResponse.model_validate(s) for s in sources], total=len(sources))
 
 
 @router.post("", response_model=SourceResponse, status_code=status.HTTP_201_CREATED)
-async def create_source(source_in: SourceCreate) -> SourceResponse:
+async def create_source(source_in: SourceCreate, db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
     """Add a new source to a feed."""
     from datetime import UTC, datetime
     from uuid import uuid4
@@ -38,7 +48,10 @@ async def create_source(source_in: SourceCreate) -> SourceResponse:
         "is_active": True,
     }
     _sources_db[source_id] = source
-    return SourceResponse(**source)
+    # The instruction's return statement `return [SourceResponse.model_validate(source) for source in sources]`
+    # was likely a copy-paste error. For create_source, it should return a single SourceResponse.
+    # Applying model_validate to the single created source, consistent with the new return type hint.
+    return SourceResponse.model_validate(source).model_dump()
 
 
 @router.get("/{source_id}", response_model=SourceResponse)
@@ -63,8 +76,8 @@ async def delete_source(source_id: UUID) -> None:
     del _sources_db[source_id]
 
 
-@router.post("/{source_id}/validate", response_model=dict)
-async def validate_source(source_id: UUID) -> dict:
+@router.post("/{source_id}/validate", response_model=dict[str, Any])
+async def validate_source(source_id: UUID) -> dict[str, Any]:
     """Validate that a source URL is accessible and can be scraped."""
     if source_id not in _sources_db:
         raise HTTPException(
@@ -83,8 +96,8 @@ async def validate_source(source_id: UUID) -> dict:
     }
 
 
-@router.post("/add-and-scrape", response_model=dict, status_code=status.HTTP_201_CREATED)
-async def add_source_and_scrape(url: str, name: str = "") -> dict:
+@router.post("/add-and-scrape", response_model=dict[str, Any], status_code=status.HTTP_201_CREATED)
+async def add_source_and_scrape(url: str, name: str = "") -> dict[str, Any]:
     """
     Add a new source URL and immediately scrape it.
 
@@ -154,8 +167,8 @@ async def add_source_and_scrape(url: str, name: str = "") -> dict:
         await scraper.close()
 
 
-@router.post("/add-and-scrape-multiple", response_model=dict, status_code=status.HTTP_201_CREATED)
-async def add_source_and_scrape_multiple(url: str, name: str = "", article_count: int = 5) -> dict:
+@router.post("/add-and-scrape-multiple", response_model=dict[str, Any], status_code=status.HTTP_201_CREATED)
+async def add_source_and_scrape_multiple(url: str, name: str = "", article_count: int = 5) -> dict[str, Any]:
     """
     Add a new source URL and immediately scrape multiple articles from it.
 

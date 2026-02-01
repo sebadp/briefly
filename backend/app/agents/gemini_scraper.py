@@ -10,6 +10,7 @@ import httpx
 from bs4 import BeautifulSoup
 from google import genai
 from google.genai import types
+from typing import Any
 
 from app.config import get_settings
 
@@ -46,7 +47,7 @@ HTML Content:
 IMPORTANT: Return ONLY a valid JSON object. No markdown, no code blocks, no explanations.
 Ensure all strings are properly escaped (no unescaped newlines or quotes in values)."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         settings = get_settings()
         self.client = genai.Client(api_key=settings.gemini_api_key)
         self.model = "gemini-2.0-flash"
@@ -72,12 +73,16 @@ Ensure all strings are properly escaped (no unescaped newlines or quotes in valu
 
             # 1. Check standard <link> tags
             feed_link = soup.find("link", type="application/rss+xml")
-            if feed_link:
-                return feed_link.get("href")
+            if feed_link and hasattr(feed_link, "get"):
+                href = feed_link.get("href")
+                if isinstance(href, str):
+                    return href
 
             feed_link = soup.find("link", type="application/atom+xml")
-            if feed_link:
-                return feed_link.get("href")
+            if feed_link and hasattr(feed_link, "get"):
+                href = feed_link.get("href")
+                if isinstance(href, str):
+                    return href
 
             # 2. Check for common patterns if no tag found (heuristic)
             # This is risky without verify, so we stick to tags only for reliability logic
@@ -336,13 +341,13 @@ Ensure all strings are properly escaped (no unescaped newlines or quotes in valu
         domain = parsed.netloc.replace("www.", "")
         return domain.split(".")[0].title()
 
-    async def close(self):
+    async def close(self) -> None:
         """Close HTTP client."""
         await self.http_client.aclose()
 
 
 # Factory function to get the appropriate scraper
-def get_scraper_agent():
+def get_scraper_agent() -> Any:
     """Get scraper agent based on configured LLM provider."""
     settings = get_settings()
 

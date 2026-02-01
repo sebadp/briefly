@@ -50,8 +50,10 @@ class FeedResponse(FeedBase):
 
     id: UUID
     created_at: datetime
-    sources: list[dict] = Field(default_factory=list)
-    ai_interpretation: dict | None = None
+    sources: list[dict[str, Any]] = Field(default_factory=list)
+    ai_interpretation: dict[str, Any] | None = None
+    details: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
+    meta: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
 
     class Config:
         from_attributes = True

@@ -15,7 +15,7 @@ class DynamoDBClient:
 
     TABLE_NAME = "briefly-articles"
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.settings = get_settings()
         self.session = aioboto3.Session(
             aws_access_key_id=self.settings.aws_access_key_id,

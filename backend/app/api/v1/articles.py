@@ -42,8 +42,8 @@ async def get_article(article_id: str) -> ArticleResponse:
         feed_id=UUID("00000000-0000-0000-0000-000000000000"),
         title="Sample Article",
         summary="This is a placeholder article. DynamoDB integration pending.",
-        url="https://example.com/article",
-        source_url="https://example.com",
+        url="https://example.com/article",  # type: ignore
+        source_url="https://example.com",  # type: ignore
         source_name="Example",
         published_at=datetime.now(UTC),
         scraped_at=datetime.now(UTC),

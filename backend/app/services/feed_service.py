@@ -132,7 +132,7 @@ class FeedService:
         )
         sources = list(result.scalars().all())
 
-        stats = {
+        stats: dict[str, Any] = {
             "feed_id": str(feed_id),
             "sources_processed": 0,
             "articles_saved": 0,

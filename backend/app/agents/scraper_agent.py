@@ -159,7 +159,10 @@ Responde ÚNICAMENTE con JSON válido:
             max_tokens=1024,
             messages=[{"role": "user", "content": prompt}],
         )
-        return response.content[0].text
+        text_block = next((b for b in response.content if b.type == "text"), None)
+        if text_block and hasattr(text_block, "text"):
+            return str(text_block.text)
+        return ""
 
     async def scrape_article(self, url: str) -> ExtractedArticle | None:
         """
@@ -245,7 +248,7 @@ Responde ÚNICAMENTE con JSON válido:
                 if article.get("url") and not article["url"].startswith("http"):
                     article["url"] = urljoin(url, article["url"])
 
-            return articles
+            return [dict(a) for a in articles]
 
         except Exception as e:
             print(f"Error scraping article list from {url}: {e}")
@@ -292,7 +295,7 @@ Responde ÚNICAMENTE con JSON válido:
 
         return results
 
-    async def close(self):
+    async def close(self) -> None:
         """Close the HTTP client."""
         await self.http.aclose()
 

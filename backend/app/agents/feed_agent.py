@@ -116,8 +116,9 @@ def search_news_sources(
             )
 
     # Sort by relevance and limit
-    results.sort(key=lambda x: x["relevance_score"], reverse=True)
-    return results[:max_results]
+    # Use a typed key function for sorting
+    sorted_results = sorted(results, key=lambda x: x.get("relevance_score", 0), reverse=True)
+    return sorted_results[:max_results]
 
 
 @tool
@@ -278,7 +279,7 @@ Responde SIEMPRE con un JSON válido con este formato:
 }
 """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.agent = Agent(
             model="claude-sonnet-4-20250514",
             system_prompt=self.SYSTEM_PROMPT,

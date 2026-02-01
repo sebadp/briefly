@@ -22,11 +22,11 @@ _feeds_db: dict[UUID, dict] = {}
 async def list_feeds() -> FeedListResponse:
     """List all feeds for the current user."""
     feeds = list(_feeds_db.values())
-    return FeedListResponse(feeds=feeds, total=len(feeds))
+    return FeedListResponse(feeds=[FeedResponse.model_validate(feed) for feed in feeds], total=len(feeds))
 
 
 @router.post("", response_model=FeedResponse, status_code=status.HTTP_201_CREATED)
-async def create_feed(feed_in: FeedCreate) -> FeedResponse:
+async def create_feed(feed_in: FeedCreate, db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
     """Create a new feed with explicit configuration."""
     from datetime import UTC, datetime
     from uuid import uuid4
@@ -41,7 +41,7 @@ async def create_feed(feed_in: FeedCreate) -> FeedResponse:
         "sources": [],
     }
     _feeds_db[feed_id] = feed
-    return FeedResponse(**feed)
+    return FeedResponse.model_validate(feed).model_dump()
 
 
 @router.post(
