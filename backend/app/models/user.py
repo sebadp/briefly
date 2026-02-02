@@ -8,6 +8,8 @@ from sqlalchemy import Column
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
+from app.constants.settings_defaults import DEFAULT_SETTINGS
+
 
 class User(SQLModel, table=True):
     """User account model."""
@@ -23,13 +25,6 @@ class User(SQLModel, table=True):
 
     # User settings stored as JSON
     settings: dict[str, Any] = Field(
-        default_factory=lambda: {
-            "llm_provider": "gemini",
-            "language": "es",
-            "theme": "dark",
-            "articles_per_source": 5,
-            "max_sources_per_briefing": 8,
-            "min_relevance_score": 7,
-        },
+        default_factory=lambda: DEFAULT_SETTINGS.copy(),
         sa_column=Column(JSONB, default={}),
     )
