@@ -64,7 +64,6 @@ class ResearchAgent:
         _language = settings_config.get("language", "es")
         # TODO: Use these settings in the agent logic below
 
-
         try:
             # ReAct Loop
             # ReAct Loop
