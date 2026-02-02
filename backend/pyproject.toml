@@ -29,6 +29,9 @@ dependencies = [
     "lxml>=5.1.0",
     
     # AI/LLM
+    # anthropic: Used for Claude-based scraper agent (app/agents/scraper_agent.py)
+    # google-genai: Used for Gemini-based scraper and research agents
+    #               (app/agents/gemini_scraper.py, app/agents/research_agent.py)
     "anthropic>=0.40.0",
     "google-genai>=1.0.0",
     "strands-agents>=0.1.0",
