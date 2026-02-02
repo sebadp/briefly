@@ -1,9 +1,14 @@
 """User model for PostgreSQL."""
 
 from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID, uuid4
 
+from sqlalchemy import Column
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
+
+from app.constants.settings_defaults import DEFAULT_SETTINGS
 
 
 class User(SQLModel, table=True):
@@ -17,3 +22,9 @@ class User(SQLModel, table=True):
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     is_active: bool = Field(default=True)
+
+    # User settings stored as JSON
+    settings: dict[str, Any] = Field(
+        default_factory=lambda: DEFAULT_SETTINGS.copy(),
+        sa_column=Column(JSONB, default={}),
+    )

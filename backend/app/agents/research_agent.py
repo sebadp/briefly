@@ -41,11 +41,28 @@ class ResearchAgent:
             self.client = genai.Client(api_key=self.settings.gemini_api_key)
             self.model = "gemini-2.0-flash"
 
-    async def research_topic(self, topic: str) -> AsyncGenerator[str, None]:
+    async def research_topic(
+        self, topic: str, user_settings: dict[str, Any] | None = None
+    ) -> AsyncGenerator[str, None]:
         """
         Research a topic and yield streaming events.
         Events are JSON strings in SSE format.
+
+        Args:
+            topic: The topic to research
+            user_settings: Optional user settings dict with:
+                - articles_per_source: int (default 5)
+                - max_sources_per_briefing: int (default 8)
+                - min_relevance_score: int (default 7)
+                - language: str (default "es")
         """
+        # Apply user settings with defaults
+        settings_config = user_settings or {}
+        articles_per_source = settings_config.get("articles_per_source", 5)
+        max_sources = settings_config.get("max_sources_per_briefing", 8)
+        min_relevance = settings_config.get("min_relevance_score", 7)
+        language = settings_config.get("language", "es")
+
         try:
             # ReAct Loop
             # ReAct Loop
@@ -87,7 +104,9 @@ class ResearchAgent:
                     state["attempted_queries"].append(query)
                 yield self._event("log", f"🚀 Acción: Buscar '{query}' ({reason})")
 
-                results = await self.search_service.search(str(query), num_results=5)
+                results = await self.search_service.search(
+                    str(query), num_results=articles_per_source
+                )
 
                 # Filter seen domains
                 new_candidates = []
@@ -116,7 +135,12 @@ class ResearchAgent:
                     "log", f"⚡ Validando {len(new_candidates)} nuevos candidatos (Stream)..."
                 )
 
-                tasks = [self._validate_candidate(scraper, cand, topic) for cand in new_candidates]
+                tasks = [
+                    self._validate_candidate(
+                        scraper, cand, topic, min_relevance, articles_per_source, language
+                    )
+                    for cand in new_candidates
+                ]
 
                 added_count = 0
                 for future in asyncio.as_completed(tasks):
@@ -134,8 +158,10 @@ class ResearchAgent:
                 )
 
                 # Early stop if we have enough sources
-                if len(state["found_sources"]) >= 8:
-                    yield self._event("log", "🎉 Meta alcanzada (8+ fuentes). Terminando.")
+                if len(state["found_sources"]) >= max_sources:
+                    yield self._event(
+                        "log", f"🎉 Meta alcanzada ({max_sources}+ fuentes). Terminando."
+                    )
                     break
 
             await scraper.close()
@@ -294,13 +320,20 @@ class ResearchAgent:
             return 10, "Error converting response"
 
     async def _validate_candidate(
-        self, scraper: Any, cand: dict[str, Any], topic: str
+        self,
+        scraper: Any,
+        cand: dict[str, Any],
+        topic: str,
+        min_relevance: int = 7,
+        articles_per_source: int = 5,
+        language: str = "es",
     ) -> dict[str, Any] | None:
         """Validate a single candidate source. Returns dict with result or None if error."""
+        _ = language  # Reserved for future prompt localization
         url = cand["base"]
         try:
             # Quick validation scrape
-            articles = await scraper.scrape_multiple_from_homepage(url, limit=4)
+            articles = await scraper.scrape_multiple_from_homepage(url, limit=articles_per_source)
 
             if not articles or len(articles) == 0:
                 return {
@@ -326,7 +359,7 @@ class ResearchAgent:
             if hasattr(scraper, "detect_rss_feed"):
                 rss_url = await scraper.detect_rss_feed(url)
 
-            if relevance_score >= 7:
+            if relevance_score >= min_relevance:
                 return {
                     "valid": True,
                     "log_msg": f"✨ Válido: {url} (Score: {relevance_score}/10, RSS: {'✅' if rss_url else '❌'})",
