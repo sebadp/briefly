@@ -28,8 +28,8 @@ class Dashboard(SQLModel, table=True):
     description: str | None = Field(default=None)
 
     # Configuration
-    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
 
     # The JSON list of source configurations found during research
     # We store them here as a snapshot, but they will also be created as actual Sources

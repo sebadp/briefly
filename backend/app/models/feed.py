@@ -1,6 +1,6 @@
 """Feed model for PostgreSQL."""
 
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -26,8 +26,8 @@ class Feed(SQLModel, table=True):
     interpreted_language: str | None = Field(default=None, max_length=10)
 
     # Timestamps
-    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
     last_scraped_at: datetime | None = Field(default=None)
 
     # Status
@@ -43,7 +43,7 @@ class Source(SQLModel, table=True):
     __tablename__ = "sources"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    feed_id: UUID = Field(foreign_key="feeds.id", index=True)
+    feed_id: UUID | None = Field(default=None, foreign_key="feeds.id", index=True)
 
     # Source configuration
     url: str = Field(max_length=2048)
@@ -61,7 +61,8 @@ class Source(SQLModel, table=True):
     last_error: str | None = Field(default=None, max_length=500)
 
     # Timestamps
-    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    created_at: datetime = Field(default_factory=datetime.utcnow)
 
     # Relationships
-    feed: Feed = Relationship(back_populates="sources")
+    feed: Feed | None = Relationship(back_populates="sources")
+
