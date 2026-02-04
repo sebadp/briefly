@@ -101,6 +101,9 @@ async def create_dashboard(
     await db.flush()  # Get the ID
 
     # Create Sources and link them
+    # Also save any initial articles found during research
+    from app.services.article_service import save_scraped_articles_batch
+
     for src in dashboard_in.sources:
         try:
             # Create source
@@ -118,6 +121,29 @@ async def create_dashboard(
                 source_id=source.id,
             )
             db.add(link)
+            
+            # Persist initial articles if present
+            # ResearchAgent returns them in 'articles' key
+            if "articles" in src and isinstance(src["articles"], list):
+                await save_scraped_articles_batch(
+                    db=db,
+                    source_id=source.id,
+                    articles_data=src["articles"],
+                    source_name=source.name,
+                    # We don't have a feed_id here since it's a dashboard source, 
+                    # but we can try to save to DynamoDB using a dummy feed ID or just leave it for now.
+                    # Actually, our architecture links sources to dashboards via feed-like mechanism?
+                    # No, DashboardSource is many-to-many. 
+                    # But save_scraped_articles_batch expects feed_id for DynamoDB.
+                    # We should probably pass the dashboard_id as feed_id equivalent for caching?
+                    # Or better: generate a feed_id for this dashboard?
+                    # Wait, DynamoDB Articles are keyed by FEED_ID.
+                    # If we want to view them in the dashboard, we query by... what?
+                    # The get_articles endpoint queries by feed_id OR falls back to postgres.
+                    # If we use dashboard_id as feed_id for now, it matches how we might query it.
+                    feed_id=dashboard.id
+                )
+
         except Exception as e:
             print(f"Error creating source for dashboard: {e}")
 
@@ -331,3 +357,103 @@ async def remove_source_from_dashboard(
             await db.delete(source)
 
     await db.commit()
+
+
+@router.post("/{dashboard_id}/refresh", status_code=status.HTTP_200_OK)
+async def refresh_dashboard(
+    dashboard_id: UUID, db: AsyncSession = Depends(get_db)
+) -> dict[str, Any]:
+    """
+    Manually trigger a re-scrape of all sources in this dashboard.
+    Fetches new articles and updates the database.
+    """
+    from app.agents import get_scraper_agent
+    from app.services.article_service import save_scraped_articles_batch
+    from app.services.search_service import SearchService
+    
+    # 1. Get Dashboard and Sources
+    result = await db.execute(select(Dashboard).where(Dashboard.id == dashboard_id))
+    dashboard = result.scalar_one_or_none()
+    if not dashboard:
+        raise HTTPException(status_code=404, detail="Dashboard not found")
+
+    query = (
+        select(Source)
+        .join(DashboardSource, DashboardSource.source_id == Source.id)
+        .where(DashboardSource.dashboard_id == dashboard_id)
+    )
+    result = await db.execute(query)
+    sources = result.scalars().all()
+    
+    if not sources:
+        return {"message": "No sources to refresh", "articles_processed": 0, "errors": []}
+
+    # 2. Scrape each source
+    scraper = get_scraper_agent()
+    total_new_articles = 0
+    errors = []
+
+    try:
+        for source in sources:
+            try:
+                # Scrape generic "news" from homepage
+                articles = await scraper.scrape_multiple_from_homepage(source.url, limit=5)
+                
+                # Fallback site-search logic
+                if not articles:
+                    searchor = SearchService()
+                    try:
+                         # Clean URL for site: query
+                         domain_only = source.url.replace("https://", "").replace("http://", "").rstrip("/").replace("www.", "")
+                         fallback_query = f"site:{domain_only}"
+                         fallback_results = await searchor.search(fallback_query, num_results=3)
+                         if fallback_results:
+                             links_to_scrape = [r["link"] for r in fallback_results if r.get("link")]
+                             if links_to_scrape:
+                                 articles = await scraper.scrape_articles(links_to_scrape, source_name=source.name)
+                    except Exception as e:
+                        print(f"Fallback search failed for {source.url}: {e}")
+                    finally:
+                        await searchor.close()
+
+                # Save articles if found
+                if articles:
+                    articles_data = [
+                        {
+                            "title": a.title,
+                            "url": a.url,
+                            "summary": a.summary,
+                            "published_at": a.published_at.isoformat() if a.published_at else None,
+                            "image_url": a.image_url,
+                            "author": a.author,
+                        }
+                        for a in articles
+                    ]
+                    
+                    saved = await save_scraped_articles_batch(
+                        db=db,
+                        source_id=source.id,
+                        articles_data=articles_data,
+                        source_name=source.name,
+                        feed_id=dashboard.id  # Use Dashboard ID as Feed ID for DynamoDB
+                    )
+                    total_new_articles += len(saved)
+                    
+                    # Optional: Update timestamps on source if we had that field
+                    # source.updated_at = datetime.now(UTC)
+                    # db.add(source)
+                
+            except Exception as e:
+                print(f"Error scraping {source.url}: {e}")
+                errors.append(f"{source.name}: {str(e)}")
+                
+        await db.commit()
+    finally:
+        if hasattr(scraper, "close"):
+            await scraper.close()
+
+    return {
+        "message": f"Refreshed {len(sources)} sources.",
+        "articles_processed": total_new_articles,
+        "errors": errors
+    }

@@ -389,6 +389,18 @@ class ResearchAgent:
                         "relevance_score": relevance_score,
                         "reason": reason,
                         "rss_url": rss_url,
+                        # Return validation articles so we can persist them
+                        "articles": [
+                            {
+                                "title": a.title,
+                                "url": a.url,
+                                "summary": a.summary,
+                                "published_at": a.published_at.isoformat() if a.published_at else None,
+                                "image_url": a.image_url,
+                                "author": a.author,
+                            }
+                            for a in articles
+                        ],
                     },
                 }
             else:
