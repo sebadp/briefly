@@ -298,6 +298,32 @@ Ensure all strings are properly escaped (no unescaped newlines or quotes in valu
         # Limit to requested count (request extra to account for failures)
         # +3 buffer
         to_scrape = list(article_urls)[: limit + 3]
+
+        # Fallback: finding zero links usually means SPA or JS rendering
+        if not to_scrape and len(html) > 0:
+            import re
+            # Regex to find http/https links in the same domain
+            pattern = fr'https?://{re.escape(base_domain)}/[^\s"\'<>]+'
+            matches = re.findall(pattern, html)
+            
+            for m in matches:
+                # Clean up occasional trailing characters from JS strings
+                m = m.split('\\')[0].split('"')[0].split("'")[0]
+                
+                path = urlparse(m).path
+                path_lower = str(path).lower()
+                
+                # Apply same filtering logic
+                if any(x in path_lower for x in ["/tag/", "/category/", "/author/", "/login", "/signup", 
+                                               "/contact", "/policy", "/terms", "/cookies", "/pricing"]):
+                    continue
+                    
+                # Relaxed SPA check - accept if it has some path segments
+                if len(path) > 3 and path != "/":
+                     article_urls.add(m)
+            
+            to_scrape = list(article_urls)[: limit + 3]
+
         articles = await self.scrape_articles(to_scrape, source_name=domain)
 
         # Post-validation: Ensure content is not a policy page

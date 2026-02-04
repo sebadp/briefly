@@ -335,6 +335,24 @@ class ResearchAgent:
             # Quick validation scrape
             articles = await scraper.scrape_multiple_from_homepage(url, limit=articles_per_source)
 
+            # Fallback: finding zero articles often means SPA/blocked homepage.
+            # Try searching for recent pages on this domain.
+            if not articles or len(articles) == 0:
+                 # domain = self._extract_base_url(url).replace("https://", "").replace("http://", "")
+                 # Can't easily use search_service here as we are inside validation loop? 
+                 # Wait, self.search_service is available on self!
+                 
+                 # Clean protocol for site: query
+                 domain_only = url.replace("https://", "").replace("http://", "").rstrip("/")
+                 fallback_query = f"site:{domain_only}"
+                 # Limit to 3 to verify existence
+                 fallback_results = await self.search_service.search(fallback_query, num_results=3)
+                 
+                 if fallback_results:
+                     links_to_scrape = [r["link"] for r in fallback_results if r.get("link")]
+                     if links_to_scrape:
+                         articles = await scraper.scrape_articles(links_to_scrape, source_name=cand["title"])
+
             if not articles or len(articles) == 0:
                 return {
                     "valid": False,
