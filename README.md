@@ -25,8 +25,8 @@ briefly/
 | **Backend** | FastAPI, Python 3.11+, SQLModel |
 | **AI/LLM** | Strands Agents, Claude SDK, **Gemini API** |
 | **Search** | **Tavily API**, Google Custom Search, Web Scraping Fallback |
-| **DB Relacional** | PostgreSQL |
-| **DB NoSQL** | DynamoDB |
+| **DB Relacional** | PostgreSQL (Source of Truth) |
+| **DB NoSQL** | DynamoDB (Article Cache & Fast Reads) |
 | **Frontend** | Next.js 14, TypeScript, Tailwind CSS, shadcn/ui |
 | **CI/CD** | GitHub Actions (Tests, Linting, Mypy) |
 | **Code Review** | **Custom AI Reviewer** (Gemini 2.0 Flash) |
@@ -104,6 +104,7 @@ AWS CDK infrastructure:
 
 ### `/docs`
 Technical documentation:
+- [Design Guide](docs/design_guide.md) - **NEW**
 - [Claude Scraping Guide](docs/claude-scraping-guide.md)
 - [NL Interpretation Guide](docs/nl-interpretation-guide.md)
 
@@ -124,7 +125,10 @@ Technical documentation:
 - **🔎 Smart Search**: Tavily/Google API with web scraping fallback
 - **📚 Briefings**: Grouped articles by source with descriptions
 - **🎯 Quick Topics**: One-click topic suggestions on home page
-- **📱 Modern UI**: Glassmorphism design with smooth animations
+- **🛠️ Manual Feeds**: Direct URL management for custom dashboards
+- **📱 Modern UI**: Premium Design System with Light/Dark mode and Glassmorphism
+- **⚡ Hybrid Architecture**: PostgreSQL + DynamoDB for high performance
+- **🔄 Smart Refresh**: Auto-update and manual rescrape capabilities
 
 ---
 
@@ -195,6 +199,9 @@ See [Infrastructure Guide](infra/README.md) for detailed deployment instructions
 - [x] Research Agent with Streaming UI
 - [x] Auto-Briefing Creation
 - [x] UX Consolidation (Briefings flow)
+- [x] Hybrid Database (PG + DynamoDB)
+- [x] Manual Feed Management
+- [x] Design System & Branding
 - [ ] AWS Deployment
 - [ ] RSS/Atom feed support
 - [ ] Email digest feature

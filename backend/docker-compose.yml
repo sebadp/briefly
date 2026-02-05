@@ -11,7 +11,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U briefly"]
+      test: [ "CMD-SHELL", "pg_isready -U briefly" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -19,13 +19,13 @@ services:
   dynamodb-local:
     image: amazon/dynamodb-local:latest
     container_name: briefly-dynamodb
-    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath /data"
+    command: "-jar DynamoDBLocal.jar -inMemory -sharedDb"
     ports:
       - "8000:8000"
-    volumes:
-      - dynamodb_data:/data
+    # volumes:
+    #   - dynamodb_data:/data
 
-  # Optional: DynamoDB Admin UI
+    # Optional: DynamoDB Admin UI
   dynamodb-admin:
     image: aaronshaf/dynamodb-admin
     container_name: briefly-dynamodb-admin

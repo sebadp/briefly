@@ -17,15 +17,23 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     settings = get_settings()
     print(f"🚀 Starting {settings.app_name} in {settings.environment} mode")
 
-    # TODO: Initialize database connections
-    # await init_postgres()
-    # await init_dynamodb()
+    # Initialize databases
+    from app.db.postgres import init_db
+    from app.db.dynamodb import dynamodb
+
+    await init_db()
+    print("📦 PostgreSQL tables initialized")
+
+    try:
+        await dynamodb.create_table_if_not_exists()
+        print("📦 DynamoDB tables initialized")
+    except Exception as e:
+        print(f"⚠️ DynamoDB init error (may be offline): {e}")
 
     yield
 
     # Shutdown
     print("👋 Shutting down...")
-    # TODO: Close database connections
 
 
 def create_app() -> FastAPI:
