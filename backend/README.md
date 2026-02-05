@@ -6,7 +6,7 @@ FastAPI backend for the Briefly news feed application.
 
 ```bash
 # 1. Start databases
-docker-compose up -d
+docker-compose up -d postgres dynamodb-local
 
 # 2. Create virtual environment
 python -m venv .venv
@@ -31,8 +31,8 @@ Open http://localhost:8000/docs for the API documentation.
 backend/
 ├── app/
 │   ├── api/v1/          # API endpoints
-│   │   ├── feeds.py     # Feed CRUD
-│   │   ├── sources.py   # Source management
+│   │   ├── dashboards.py # Dictionary CRUD (was feeds)
+│   │   ├── sources.py    # Source management
 │   │   └── articles.py  # Article retrieval
 │   ├── schemas/         # Pydantic schemas
 │   ├── models/          # SQLModel DB models
@@ -51,15 +51,16 @@ backend/
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/health` | Health check |
-| GET | `/api/v1/feeds` | List feeds |
-| POST | `/api/v1/feeds` | Create feed |
-| POST | `/api/v1/feeds/from-natural-language` | Create feed from NL |
-| GET | `/api/v1/feeds/{id}` | Get feed |
-| DELETE | `/api/v1/feeds/{id}` | Delete feed |
+| GET | `/api/v1/dashboards` | List dashboards |
+| POST | `/api/v1/dashboards` | Create dashboard (AI) |
+| POST | `/api/v1/dashboards/manual` | Create dashboard (Manual) |
+| GET | `/api/v1/dashboards/{id}` | Get dashboard |
+| DELETE | `/api/v1/dashboards/{id}` | Delete dashboard |
+| POST | `/api/v1/dashboards/{id}/refresh` | Trigger manual rescrape |
 | GET | `/api/v1/sources` | List sources |
 | POST | `/api/v1/sources` | Add source |
-| GET | `/api/v1/articles` | List articles |
-| POST | `/api/v1/articles/scrape` | Trigger scrape |
+| GET | `/api/v1/articles` | List articles (DynamoDB cache) |
+| POST | `/api/v1/articles/scrape` | Trigger scrape (Internal) |
 
 ## Development
 
